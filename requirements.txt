@@ -12,7 +12,6 @@ Jinja2==2.11.2
 MarkupSafe==1.1.1
 numpy==1.18.5
 pandas==1.0.4
-pkg-resources==0.0.0
 python-dateutil==2.8.1
 pytz==2020.1
 requests==2.23.0
