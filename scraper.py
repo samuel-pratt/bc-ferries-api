@@ -140,4 +140,5 @@ def get_data():
     return times
 
 # Used for testing
-get_data()
+if __name__ == '__main__':
+    print(get_data())
