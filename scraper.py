@@ -2,8 +2,9 @@
 ## Victoria, BC, Canada
 
 import json
-import pandas as pd
+
 import requests
+import pandas as pd
 from bs4 import BeautifulSoup
 
 # Took this off of beautiful soup documentation
@@ -25,88 +26,88 @@ def get_data():
 
     # Data layout for schedule
     times = {
-        "Tsawwassen": {
-            "Swartz Bay": {
-                "Next Sailings": [],
-                "Future Sailings": [],
-                "Car Waits": 0,
-                "Oversize Waits": 0
+        "tsawwassen": {
+            "swartz bay": {
+                "next sailings": [],
+                "future sailings": [],
+                "car waits": 0,
+                "oversize waits": 0
             },
-            "Southern Gulf Islands": {
-                "Next Sailings": [],
-                "Future Sailings": [],
-                "Car Waits": 0,
-                "Oversize Waits": 0
+            "southern gulf islands": {
+                "next sailings": [],
+                "future sailings": [],
+                "car waits": 0,
+                "oversize waits": 0
             },
-            "Duke Point": {
-                "Next Sailings": [],
-                "Future Sailings": [],
-                "Car Waits": 0,
-                "Oversize Waits": 0
+            "duke point": {
+                "next sailings": [],
+                "future sailings": [],
+                "car waits": 0,
+                "oversize waits": 0
             }
         },
-        "Swartz Bay": {
-            "Tsawwassen": {
-                "Next Sailings": [],
-                "Future Sailings": [],
-                "Car Waits": 0,
-                "Oversize Waits": 0
+        "swartz bay": {
+            "tsawwassen": {
+                "next sailings": [],
+                "future sailings": [],
+                "car waits": 0,
+                "oversize waits": 0
             },
-            "Fulford Harbour (Saltspring Is.)": {
-                "Next Sailings": [],
-                "Future Sailings": [],
-                "Car Waits": 0,
-                "Oversize Waits": 0
+            "fulford harbour (saltspring is.)": {
+                "next sailings": [],
+                "future sailings": [],
+                "car waits": 0,
+                "oversize waits": 0
             },
-            "Southern Gulf Islands": {
-                "Next Sailings": [],
-                "Future Sailings": [],
-                "Car Waits": 0,
-                "Oversize Waits": 0
+            "southern gulf islands": {
+                "next sailings": [],
+                "future sailings": [],
+                "car waits": 0,
+                "oversize waits": 0
             }
         },
-        "Nanaimo (Duke Pt)": {
-            "Tsawwassen": {
-                "Next Sailings": [],
-                "Future Sailings": [],
-                "Car Waits": 0,
-                "Oversize Waits": 0
+        "nanaimo (duke pt)": {
+            "tsawwassen": {
+                "next sailings": [],
+                "future sailings": [],
+                "car waits": 0,
+                "oversize waits": 0
             }
         },
-        "Nanaimo (Dep.Bay)": {
-            "Horseshoe Bay": {
-                "Next Sailings": [],
-                "Future Sailings": [],
-                "Car Waits": 0,
-                "Oversize Waits": 0
+        "nanaimo (dep.bay)": {
+            "horseshoe bay": {
+                "next sailings": [],
+                "future sailings": [],
+                "car waits": 0,
+                "oversize waits": 0
             }
         },
-        "Horseshoe Bay": {
-            "Departure Bay": {
-                "Next Sailings": [],
-                "Future Sailings": [],
-                "Car Waits": 0,
-                "Oversize Waits": 0
+        "horseshoe bay": {
+            "departure bay": {
+                "next sailings": [],
+                "future sailings": [],
+                "car waits": 0,
+                "oversize waits": 0
             },
-            "Langdale": {
-                "Next Sailings": [],
-                "Future Sailings": [],
-                "Car Waits": 0,
-                "Oversize Waits": 0
+            "langdale": {
+                "next sailings": [],
+                "future sailings": [],
+                "car waits": 0,
+                "oversize waits": 0
             },
-            "Snug Cove (Bowen Is.)": {
-                "Next Sailings": [],
-                "Future Sailings": [],
-                "Car Waits": 0,
-                "Oversize Waits": 0
+            "snug cove (bowen is.)": {
+                "next sailings": [],
+                "future sailings": [],
+                "car waits": 0,
+                "oversize waits": 0
             }
         },
-        "Langdale": {
-            "Horseshoe Bay": {
-                "Next Sailings": [],
-                "Future Sailings": [],
-                "Car Waits": 0,
-                "Oversize Waits": 0
+        "langdale": {
+            "horseshoe bay": {
+                "next sailings": [],
+                "future sailings": [],
+                "car waits": 0,
+                "oversize waits": 0
             }
         }
     }
@@ -126,16 +127,19 @@ def get_data():
         if len(x) == 0:
             continue
         elif len(x) == 1:
-            terminal = x['0']
+            terminal = x['0'].lower()
         elif '4' in x.keys():
-            destination = x['0'].split(' to ')[1]
+            destination = x['0'].split(' to ')[1].lower()
             if '2' in x.keys():
-                times[terminal][destination]['Car Waits'] = x['2']
+                times[terminal][destination]['car waits'] = x['2']
             if '3' in x.keys():
-                times[terminal][destination]['Oversize Waits'] = x['3']
-            times[terminal][destination]['Future Sailings'] = x['4'].split()
+                times[terminal][destination]['oversize waits'] = x['3']
+            future_sailings = x['4'].split()
+            for i in range(len(future_sailings)):
+                future_sailings[i] = future_sailings[i].replace('*', '')
+            times[terminal][destination]['future sailings'] = future_sailings
         elif '1' in x.keys():
-            times[terminal][destination]['Next Sailings'].append([x['0'],x['1']])
+            times[terminal][destination]['next sailings'].append([x['0'],x['1']])
 
     return times
 
