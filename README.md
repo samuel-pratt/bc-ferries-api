@@ -6,6 +6,8 @@ The only public API for retrieving current data on BC Ferries sailings.
 
 FerryTimes is a flask api connected to a python web scraper. The scraper is made with BeautifulSOup4 and Pandas. It runs every minute and saves the relevant, formatted data to a 'database' made with flata. When flask recieves a request, it checks the validity of the request, then returns the specified data.
 
+The frontend is made with HTML, Bootstrap, and Javascript. When the user hits the request button, it runs a small script that calls the api with the user's request, and displays the info on the page.
+
 <b>Built with</b>
 
 - [Flask](https://github.com/pallets/flask)
