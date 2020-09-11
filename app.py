@@ -18,7 +18,7 @@ db.get('table1')
 
 app = Flask(__name__)
 
-sched = Scheduler() # Scheduler object
+sched = Scheduler(daemon=True) # Scheduler object
 sched.start()
 
 # Valid terminals
