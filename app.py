@@ -87,7 +87,7 @@ def all_data():
 def terminal_data(departure_terminal):
     # Check that terminal is valid
     if departure_terminal not in departure_terminals:
-        return "Error: not a valid terminal."
+        return jsonify("Error: not a valid terminal.")
 
     departure_terminal = departure_terminal.replace('-', ' ')
 
@@ -99,11 +99,11 @@ def terminal_data(departure_terminal):
 def terminals_data(departure_terminal, destination_terminal):
     # Check that departure terminal is valid
     if departure_terminal not in departure_terminals:
-        return "Error: Not a valid departure terminal."
+        return jsonify("Error: Not a valid departure terminal.")
 
     # Cheheck that destination terminal is valid
     if destination_terminal not in destination_terminals[departure_terminal]:
-        return "Error: Not a valid destination terminal."
+        return jsonify("Error: Not a valid destination terminal.")
 
     departure_terminal = departure_terminal.replace('-', ' ')
     destination_terminal = destination_terminal.replace('-', ' ')
@@ -115,15 +115,15 @@ def terminals_data(departure_terminal, destination_terminal):
 def info_data(departure_terminal, destination_terminal, data_type):
     # Check that departure terminal is valid
     if departure_terminal not in departure_terminals:
-        return "Error: Not a valid departure terminal."
+        return jsonify("Error: Not a valid departure terminal.")
 
     # Check that destination terminal is valid
     if destination_terminal not in destination_terminals[departure_terminal]:
-        return "Error: Not a valid destination terminal."
+        return jsonify("Error: Not a valid destination terminal.")
 
     # Check that data type is valid
     if data_type not in data_types:
-        return "Error: Not a valid data type."
+        return jsonify("Error: Not a valid data type.")
 
     departure_terminal = departure_terminal.replace('-', ' ')
     destination_terminal = destination_terminal.replace('-', ' ')
