@@ -124,22 +124,26 @@ def get_data():
 
     # Takes out useful data from json_data and puts it into times
     for x in json_data:
-        if len(x) == 0:
+        try:
+            if len(x) == 0:
+                continue
+            elif len(x) == 1:
+                terminal = x['0'].lower()
+            elif '4' in x.keys():
+                destination = x['0'].split(' to ')[1].lower()
+                if '2' in x.keys():
+                    times[terminal][destination]['car waits'] = x['2']
+                if '3' in x.keys():
+                    times[terminal][destination]['oversize waits'] = x['3']
+                future_sailings = x['4'].split()
+                for i in range(len(future_sailings)):
+                    future_sailings[i] = future_sailings[i].replace('*', '')
+                times[terminal][destination]['future sailings'] = future_sailings
+            elif '1' in x.keys():
+                times[terminal][destination]['next sailings'].append([x['0'],x['1']])
+        except KeyError:
+            print("KeyError")
             continue
-        elif len(x) == 1:
-            terminal = x['0'].lower()
-        elif '4' in x.keys():
-            destination = x['0'].split(' to ')[1].lower()
-            if '2' in x.keys():
-                times[terminal][destination]['car waits'] = x['2']
-            if '3' in x.keys():
-                times[terminal][destination]['oversize waits'] = x['3']
-            future_sailings = x['4'].split()
-            for i in range(len(future_sailings)):
-                future_sailings[i] = future_sailings[i].replace('*', '')
-            times[terminal][destination]['future sailings'] = future_sailings
-        elif '1' in x.keys():
-            times[terminal][destination]['next sailings'].append([x['0'],x['1']])
 
     return times
 
