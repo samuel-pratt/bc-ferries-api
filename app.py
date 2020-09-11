@@ -85,9 +85,11 @@ def all_data():
 # Return all routes for a specified terminal
 @app.route('/api/<departure_terminal>/')
 def terminal_data(departure_terminal):
+    departure_terminal = departure_terminal.lower()
+
     # Check that terminal is valid
     if departure_terminal not in departure_terminals:
-        return jsonify("Error: not a valid terminal.")
+        return jsonify("Error: not a valid departure terminal.")
 
     departure_terminal = departure_terminal.replace('-', ' ')
 
@@ -97,6 +99,9 @@ def terminal_data(departure_terminal):
 # Return all info for 
 @app.route('/api/<departure_terminal>/<destination_terminal>/')
 def terminals_data(departure_terminal, destination_terminal):
+    departure_terminal = departure_terminal.lower()
+    destination_terminal = destination_terminal.lower()
+
     # Check that departure terminal is valid
     if departure_terminal not in departure_terminals:
         return jsonify("Error: Not a valid departure terminal.")
@@ -113,6 +118,10 @@ def terminals_data(departure_terminal, destination_terminal):
 
 @app.route('/api/<departure_terminal>/<destination_terminal>/<data_type>/')
 def info_data(departure_terminal, destination_terminal, data_type):
+    departure_terminal = departure_terminal.lower()
+    destination_terminal = destination_terminal.lower()
+    data_type = data_type.lower()
+
     # Check that departure terminal is valid
     if departure_terminal not in departure_terminals:
         return jsonify("Error: Not a valid departure terminal.")
