@@ -2,26 +2,25 @@
 ## Victoria, BC, Canada
 
 import os
-
+import json
 from flask import Flask, jsonify, render_template
 from flata import Flata, where
 from flata.storages import JSONStorage
 from apscheduler.scheduler import Scheduler
-
 from scraper import get_data
 
-import json
-
+# Initialize db
 db = Flata('./db.json', storage=JSONStorage)
 db.table('table1')
 db.get('table1')
 
 app = Flask(__name__)
 
-sched = Scheduler(daemon=True) # Scheduler object
+# Scheduler object
+sched = Scheduler(daemon=True)
 sched.start()
 
-# Valid terminals
+# Valid departure terminals
 departure_terminals = [
     "tsawwassen",
     "swartz-bay",
@@ -31,6 +30,7 @@ departure_terminals = [
     "langdale"
 ]
 
+# Valid destination terminals
 destination_terminals = {
     "tsawwassen": [
         "swartz-bay",
@@ -57,6 +57,7 @@ destination_terminals = {
     ]
 }
 
+# Valid data types
 data_types = [
     "next-sailings",
     "future-sailings",
@@ -82,7 +83,7 @@ def all_data():
     data = db.all()
     return jsonify(data['table1'][0]['data'])
 
-# Return all routes for a specified terminal
+# Returns all info for a specified terminal
 @app.route('/api/<departure_terminal>/')
 def terminal_data(departure_terminal):
     departure_terminal = departure_terminal.lower()
@@ -91,12 +92,13 @@ def terminal_data(departure_terminal):
     if departure_terminal not in departure_terminals:
         return jsonify("Error: not a valid departure terminal.")
 
+    # Format paramater for accessing db
     departure_terminal = departure_terminal.replace('-', ' ')
 
     data = db.all()
     return jsonify(data['table1'][0]['data'][departure_terminal])
 
-# Return all info for 
+# Returns all info for a specified route
 @app.route('/api/<departure_terminal>/<destination_terminal>/')
 def terminals_data(departure_terminal, destination_terminal):
     departure_terminal = departure_terminal.lower()
@@ -110,12 +112,14 @@ def terminals_data(departure_terminal, destination_terminal):
     if destination_terminal not in destination_terminals[departure_terminal]:
         return jsonify("Error: Not a valid destination terminal.")
 
+    # Format paramaters for accessing db
     departure_terminal = departure_terminal.replace('-', ' ')
     destination_terminal = destination_terminal.replace('-', ' ')
 
     data = db.all()
     return jsonify(data['table1'][0]['data'][departure_terminal][destination_terminal])
 
+# Returns a specific bit of data for a specified route
 @app.route('/api/<departure_terminal>/<destination_terminal>/<data_type>/')
 def info_data(departure_terminal, destination_terminal, data_type):
     departure_terminal = departure_terminal.lower()
@@ -134,6 +138,7 @@ def info_data(departure_terminal, destination_terminal, data_type):
     if data_type not in data_types:
         return jsonify("Error: Not a valid data type.")
 
+    # Format paramaters for accessing db
     departure_terminal = departure_terminal.replace('-', ' ')
     destination_terminal = destination_terminal.replace('-', ' ')
     data_type = data_type.replace('-', ' ')

@@ -2,13 +2,11 @@
 ## Victoria, BC, Canada
 
 import json
-
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 
 # Took this off of beautiful soup documentation
-# add url here
 def make_soup(url):
     res = requests.get(url)
     html_content = res.text
@@ -142,6 +140,8 @@ def get_data():
             elif '1' in x.keys():
                 times[terminal][destination]['next sailings'].append([x['0'],x['1']])
         except KeyError:
+            # If there is a warning on BC Ferries' site, this will catch it
+            # The data should still be accurately updated
             print("KeyError")
             continue
 
