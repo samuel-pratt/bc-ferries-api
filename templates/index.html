@@ -1,15 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-177910217-1"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-177910217-1');
+    </script>
+
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>
       FerryTimes
     </title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/bootstrap.css') }}">
     <link rel="shortcut icon" href="/static/favicon.ico">
-    </style>
+
     <script src="//code.jquery.com/jquery-2.1.0.min.js"></script>
     <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
   </head>
@@ -22,8 +33,7 @@
         </div>
       </div>
       <div class="row">
-        <div class="col-sm-2 col-lg-2 col-md-2">
-        </div>
+        <div class="col-sm-2 col-lg-2 col-md-2"></div>
         <div class="col-lg-8 col-md-8 col-sm-8">
           <h1 class="center">
             Try it now!
@@ -84,5 +94,6 @@
           });
         }
       </script>
+    </div>
   </body>
 </html>
