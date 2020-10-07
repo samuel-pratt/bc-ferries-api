@@ -35,7 +35,7 @@ destination_terminals = {
     "tsawwassen": [
         "swartz-bay",
         "southern-gulf-islands",
-        "duke-point"
+        "nanaimo-(duke-pt)"
     ],
     "swartz-bay": [
         "tsawwassen",
@@ -48,7 +48,7 @@ destination_terminals = {
         "horseshoe-bay"
     ],
     "horseshoe-bay": [
-        "departure-bay",
+        "nanaimo-(dep.bay)",
         "langdale",
         "snug-cove-bowen-island"
     ],
@@ -120,31 +120,31 @@ def terminals_data(departure_terminal, destination_terminal):
     return jsonify(data['table1'][0]['data'][departure_terminal][destination_terminal])
 
 # Returns a specific bit of data for a specified route
-@app.route('/api/<departure_terminal>/<destination_terminal>/<data_type>/')
-def info_data(departure_terminal, destination_terminal, data_type):
-    departure_terminal = departure_terminal.lower()
-    destination_terminal = destination_terminal.lower()
-    data_type = data_type.lower()
-
-    # Check that departure terminal is valid
-    if departure_terminal not in departure_terminals:
-        return jsonify("Error: Not a valid departure terminal.")
-
-    # Check that destination terminal is valid
-    if destination_terminal not in destination_terminals[departure_terminal]:
-        return jsonify("Error: Not a valid destination terminal.")
-
-    # Check that data type is valid
-    if data_type not in data_types:
-        return jsonify("Error: Not a valid data type.")
-
-    # Format paramaters for accessing db
-    departure_terminal = departure_terminal.replace('-', ' ')
-    destination_terminal = destination_terminal.replace('-', ' ')
-    data_type = data_type.replace('-', ' ')
-
-    data = db.all()
-    return jsonify(data['table1'][0]['data'][departure_terminal][destination_terminal][data_type])
+#@app.route('/api/<departure_terminal>/<destination_terminal>/<data_type>/')
+#def info_data(departure_terminal, destination_terminal, data_type):
+#    departure_terminal = departure_terminal.lower()
+#    destination_terminal = destination_terminal.lower()
+#    data_type = data_type.lower()
+#
+#    # Check that departure terminal is valid
+#    if departure_terminal not in departure_terminals:
+#        return jsonify("Error: Not a valid departure terminal.")
+#
+#    # Check that destination terminal is valid
+#    if destination_terminal not in destination_terminals[departure_terminal]:
+#        return jsonify("Error: Not a valid destination terminal.")
+#
+#    # Check that data type is valid
+#    if data_type not in data_types:
+#        return jsonify("Error: Not a valid data type.")
+#
+#    # Format paramaters for accessing db
+#    departure_terminal = departure_terminal.replace('-', ' ')
+#    destination_terminal = destination_terminal.replace('-', ' ')
+#    data_type = data_type.replace('-', ' ')
+#
+#    data = db.all()
+#    return jsonify(data['table1'][0]['data'][departure_terminal][destination_terminal][data_type])
 
 if __name__ == '__main__':
     app.run(debug=True,host='0.0.0.0',port=int(os.environ.get('PORT', 8080)))

@@ -20,7 +20,7 @@ The frontend is made with HTML, Bootstrap, and Javascript. When the user hits th
 
 The api runs on the format:
 
-`https://ferrytimes.ca/api/<departure-terminal>/<destination-terminal>/<data-type>`
+`https://ferrytimes.ca/api/<departure-terminal>/<destination-terminal>`
 
 You can be as specific as needed, the fewer arguments there are, the more data you will recieve.
 
@@ -71,15 +71,6 @@ Note: destination terminal must correspond with departure terminal, for example 
 ]
 ```
 
-#### data-type
-
-```
-"next-sailings"
-"future-sailings"
-"car-waits"
-"oversize-waits"
-```
-
 #### Errors
 
 If any of the parameters are not from the above, you will see one of the following errors:
@@ -87,7 +78,6 @@ If any of the parameters are not from the above, you will see one of the followi
 ```
 "Error: Not a valid departure terminal."
 "Error: Not a valid destination terminal."
-"Error: Not a valid data type."
 ```
 
 If you see an error not included in this list, there may be an issue with the API, please [submit an issue](https://github.com/samuel-pratt/ferry-times-api/issues/new)

@@ -8,143 +8,102 @@ from bs4 import BeautifulSoup
 
 # Took this off of beautiful soup documentation
 def make_soup(url):
-    res = requests.get(url)
+    res = requests.get(url, verify=False)
     html_content = res.text
     soup_object = BeautifulSoup(html_content , "html.parser")
     return soup_object
 
 def get_data():
     # Data layout for schedule
-    times = {
+    schedule = {
         "tsawwassen": {
-            "swartz bay": {
-                "next sailings": [],
-                "future sailings": [],
-                "car waits": 0,
-                "oversize waits": 0
-            },
-            "southern gulf islands": {
-                "next sailings": [],
-                "future sailings": [],
-                "car waits": 0,
-                "oversize waits": 0
-            },
-            "duke point": {
-                "next sailings": [],
-                "future sailings": [],
-                "car waits": 0,
-                "oversize waits": 0
-            }
+            "swartz bay": [],
+            "southern gulf islands": [],
+            "nanaimo (duke pt)": []
         },
         "swartz bay": {
-            "tsawwassen": {
-                "next sailings": [],
-                "future sailings": [],
-                "car waits": 0,
-                "oversize waits": 0
-            },
-            "fulford harbour (saltspring is.)": {
-                "next sailings": [],
-                "future sailings": [],
-                "car waits": 0,
-                "oversize waits": 0
-            },
-            "southern gulf islands": {
-                "next sailings": [],
-                "future sailings": [],
-                "car waits": 0,
-                "oversize waits": 0
-            }
+            "tsawwassen": [],
+            "fulford harbour (saltspring is.)": [],
+            "southern gulf islands": []
         },
         "nanaimo (duke pt)": {
-            "tsawwassen": {
-                "next sailings": [],
-                "future sailings": [],
-                "car waits": 0,
-                "oversize waits": 0
-            }
+            "tsawwassen": []
         },
         "nanaimo (dep.bay)": {
-            "horseshoe bay": {
-                "next sailings": [],
-                "future sailings": [],
-                "car waits": 0,
-                "oversize waits": 0
-            }
+            "horseshoe bay": []
         },
         "horseshoe bay": {
-            "departure bay": {
-                "next sailings": [],
-                "future sailings": [],
-                "car waits": 0,
-                "oversize waits": 0
-            },
-            "langdale": {
-                "next sailings": [],
-                "future sailings": [],
-                "car waits": 0,
-                "oversize waits": 0
-            },
-            "snug cove (bowen is.)": {
-                "next sailings": [],
-                "future sailings": [],
-                "car waits": 0,
-                "oversize waits": 0
-            }
+            "nanaimo (dep.bay)": [],
+            "langdale": [],
+            "snug cove (bowen is.)": []
         },
         "langdale": {
-            "horseshoe bay": {
-                "next sailings": [],
-                "future sailings": [],
-                "car waits": 0,
-                "oversize waits": 0
-            }
+            "horseshoe bay": []
         }
     }
 
-    # Routes
+    # BC Ferries link for each route
     route_links = {
-        "Tsawwassen to Duke Point": "https://www.bcferries.com/current-conditions/vancouver-tsawwassen-nanaimo-duke-point/TSA-DUK",
-        "Tsawwassen to Southern Gulf Islands": "https://www.bcferries.com/current-conditions/vancouver-tsawwassen-southern-gulf-islands/TSA-SGI",
-        "Tsawwassen to Swartz Bay": "https://www.bcferries.com/current-conditions/vancouver-tsawwassen-victoria-swartz-bay/TSA-SWB",
-        "Swartz Bay to Tsawwassen": "https://www.bcferries.com/current-conditions/victoria-swartz-bay-vancouver-tsawwassen/SWB-TSA",
-        "Swartz Bay to Fulford Harbour": "https://www.bcferries.com/current-conditions/victoria-swartz-bay-salt-spring-island-fulford-harbour/SWB-FUL",
-        "Swartz Bay to Southern Gulf Islands": "https://www.bcferries.com/current-conditions/victoria-swartz-bay-southern-gulf-islands/SWB-SGI",
-        "Horseshoe Bay to Departure Bay": "https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-nanaimo-departure-bay/HSB-NAN",
-        "Horseshoe Bay to Langdale": "https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-sunshine-coast-langdale/HSB-LNG",
-        "Horseshoe Bay to Snug Cove": "https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-bowen-island-snug-cove/HSB-BOW",
-        "Duke Point to Tsawwassen": "https://www.bcferries.com/current-conditions/nanaimo-duke-point-vancouver-tsawwassen/DUK-TSA",
-        "Langdale to Horseshoe Bay": "https://www.bcferries.com/current-conditions/sunshine-coast-langdale-vancouver-horseshoe-bay/LNG-HSB",
-        "Departure Bay to Horseshoe Bay": "https://www.bcferries.com/current-conditions/nanaimo-departure-bay-vancouver-horseshoe-bay/NAN-HSB"
+        "tsawwassen to nanaimo (duke pt)": "https://www.bcferries.com/current-conditions/vancouver-tsawwassen-nanaimo-duke-point/TSA-DUK",
+        "tsawwassen to southern gulf islands": "https://www.bcferries.com/current-conditions/vancouver-tsawwassen-southern-gulf-islands/TSA-SGI",
+        "tsawwassen to swartz bay": "https://www.bcferries.com/current-conditions/vancouver-tsawwassen-victoria-swartz-bay/TSA-SWB",
+        "swartz bay to tsawwassen": "https://www.bcferries.com/current-conditions/victoria-swartz-bay-vancouver-tsawwassen/SWB-TSA",
+        "swartz bay to fulford harbour (saltspring is.)": "https://www.bcferries.com/current-conditions/victoria-swartz-bay-salt-spring-island-fulford-harbour/SWB-FUL",
+        "swartz bay to southern gulf islands": "https://www.bcferries.com/current-conditions/victoria-swartz-bay-southern-gulf-islands/SWB-SGI",
+        "horseshoe bay to nanaimo (dep.bay)": "https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-nanaimo-departure-bay/HSB-NAN",
+        "horseshoe bay to langdale": "https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-sunshine-coast-langdale/HSB-LNG",
+        "horseshoe bay to snug cove (bowen is.)": "https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-bowen-island-snug-cove/HSB-BOW",
+        "nanaimo (duke pt) to tsawwassen": "https://www.bcferries.com/current-conditions/nanaimo-duke-point-vancouver-tsawwassen/DUK-TSA",
+        "langdale to horseshoe bay": "https://www.bcferries.com/current-conditions/sunshine-coast-langdale-vancouver-horseshoe-bay/LNG-HSB",
+        "nanaimo (dep.bay) to horseshoe bay": "https://www.bcferries.com/current-conditions/nanaimo-departure-bay-vancouver-horseshoe-bay/NAN-HSB"
     }
 
-    # City - Terminal names
-    ct_names = {
-        "Tsawwassen": "Vancouver",
-        "Horseshoe Bay": "Vancouver",
-        "Swartz Bay": "Victoria",
-        "Duke Point": "Nanaimo",
-        "Departure Bay": "Nanaimo",
-        "Langdale": "Sunshine Coast",
-        "Snug Cove": "Bowen Island",
-        "Fulford Harbour": "Salt Spring Island",
-    }
+    # Route names
+    routes = [
+        "tsawwassen to nanaimo (duke pt)",
+        "tsawwassen to southern gulf islands",
+        "tsawwassen to swartz bay",
+        "swartz bay to tsawwassen",
+        "swartz bay to fulford harbour (saltspring is.)",
+        "swartz bay to southern gulf islands",
+        "horseshoe bay to nanaimo (dep.bay)",
+        "horseshoe bay to langdale",
+        "horseshoe bay to snug cove (bowen is.)",
+        "nanaimo (duke pt) to tsawwassen",
+        "langdale to horseshoe bay",
+        "nanaimo (dep.bay) to horseshoe bay"
+    ]
 
-    # Set webpage url and set up beautiful soup for scraping
-    url = (route_links["Tsawwassen to Duke Point"])
-    soup = make_soup(url)
+    for route in routes:
+        # Set webpage url and set up beautiful soup for scraping
+        url = (route_links[route])
+        soup = make_soup(url)
 
-    # Find all table data from webpage
-    data = soup.find('table')
-    df = pd.read_html(str(data))
+        # Find all table data from webpage
+        data = soup.find('table')
+        df = pd.read_html(str(data))
 
-    # Converts messy data into readable json
-    raw_data = df[0].to_json(orient='records')
-    json_data = json.loads(raw_data)[:-1]
+        # Converts messy data into readable json
+        raw_data = df[0].to_json(orient='records')
+        json_data = json.loads(raw_data)[:-1]
 
-    print(json_data)
+        for i in json_data[:]:
+            if len(i['1']) >= 20:
+                json_data.remove(i)
+                continue
+            if 'Status' in i['1'] or 'Arrived' in i['1'] or 'ETA' in i['1']:
+                json_data.remove(i)
 
-    return times
+        for i in json_data:
+            sailing_data = {
+                "time": i['0'],
+                "capacity": i['1'].split(' ')[0]
+            }
+            index = route.split(' to ')
+            schedule[index[0]][index[1]].append(sailing_data)
+        
+
+    return schedule
 
 # Used for testing
 if __name__ == '__main__':
