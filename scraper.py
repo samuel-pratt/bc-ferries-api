@@ -14,14 +14,6 @@ def make_soup(url):
     return soup_object
 
 def get_data():
-    # Set webpage url and set up beautiful soup for scraping
-    url = ("https://orca.bcferries.com/cc/marqui/at-a-glance.asp")
-    soup = make_soup(url)
-
-    # Find all table data from webpage
-    data = soup.find('table')
-    df = pd.read_html(str(data))
-
     # Data layout for schedule
     times = {
         "tsawwassen": {
@@ -110,40 +102,47 @@ def get_data():
         }
     }
 
+    # Routes
+    route_links = {
+        "Tsawwassen to Duke Point": "https://www.bcferries.com/current-conditions/vancouver-tsawwassen-nanaimo-duke-point/TSA-DUK",
+        "Tsawwassen to Southern Gulf Islands": "https://www.bcferries.com/current-conditions/vancouver-tsawwassen-southern-gulf-islands/TSA-SGI",
+        "Tsawwassen to Swartz Bay": "https://www.bcferries.com/current-conditions/vancouver-tsawwassen-victoria-swartz-bay/TSA-SWB",
+        "Swartz Bay to Tsawwassen": "https://www.bcferries.com/current-conditions/victoria-swartz-bay-vancouver-tsawwassen/SWB-TSA",
+        "Swartz Bay to Fulford Harbour": "https://www.bcferries.com/current-conditions/victoria-swartz-bay-salt-spring-island-fulford-harbour/SWB-FUL",
+        "Swartz Bay to Southern Gulf Islands": "https://www.bcferries.com/current-conditions/victoria-swartz-bay-southern-gulf-islands/SWB-SGI",
+        "Horseshoe Bay to Departure Bay": "https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-nanaimo-departure-bay/HSB-NAN",
+        "Horseshoe Bay to Langdale": "https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-sunshine-coast-langdale/HSB-LNG",
+        "Horseshoe Bay to Snug Cove": "https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-bowen-island-snug-cove/HSB-BOW",
+        "Duke Point to Tsawwassen": "https://www.bcferries.com/current-conditions/nanaimo-duke-point-vancouver-tsawwassen/DUK-TSA",
+        "Langdale to Horseshoe Bay": "https://www.bcferries.com/current-conditions/sunshine-coast-langdale-vancouver-horseshoe-bay/LNG-HSB",
+        "Departure Bay to Horseshoe Bay": "https://www.bcferries.com/current-conditions/nanaimo-departure-bay-vancouver-horseshoe-bay/NAN-HSB"
+    }
+
+    # City - Terminal names
+    ct_names = {
+        "Tsawwassen": "Vancouver",
+        "Horseshoe Bay": "Vancouver",
+        "Swartz Bay": "Victoria",
+        "Duke Point": "Nanaimo",
+        "Departure Bay": "Nanaimo",
+        "Langdale": "Sunshine Coast",
+        "Snug Cove": "Bowen Island",
+        "Fulford Harbour": "Salt Spring Island",
+    }
+
+    # Set webpage url and set up beautiful soup for scraping
+    url = (route_links["Tsawwassen to Duke Point"])
+    soup = make_soup(url)
+
+    # Find all table data from webpage
+    data = soup.find('table')
+    df = pd.read_html(str(data))
+
     # Converts messy data into readable json
     raw_data = df[0].to_json(orient='records')
     json_data = json.loads(raw_data)[:-1]
 
-    # Cleans out useless data from json_data
-    for x in json_data:
-        for y in range(8):
-            if x[str(y)] == None or 'Conditions' in x[str(y)] or '*denotes' in x[str(y)] or 'Route' in x[str(y)] or 'Next Sailings' in x[str(y)] or 'Car Waits' in x[str(y)] or 'Oversize Waits' in x[str(y)] or 'Later Sailings' in x[str(y)] or 'Depart, Arrive' in x[str(y)] or 'Service Notices' in x[str(y)] or 'Sailing Details' in x[str(y)]:
-                x.pop(str(y))
-
-    # Takes out useful data from json_data and puts it into times
-    for x in json_data:
-        try:
-            if len(x) == 0:
-                continue
-            elif len(x) == 1:
-                terminal = x['0'].lower()
-            elif '4' in x.keys():
-                destination = x['0'].split(' to ')[1].lower()
-                if '2' in x.keys():
-                    times[terminal][destination]['car waits'] = x['2']
-                if '3' in x.keys():
-                    times[terminal][destination]['oversize waits'] = x['3']
-                future_sailings = x['4'].split()
-                for i in range(len(future_sailings)):
-                    future_sailings[i] = future_sailings[i].replace('*', '')
-                times[terminal][destination]['future sailings'] = future_sailings
-            elif '1' in x.keys():
-                times[terminal][destination]['next sailings'].append([x['0'],x['1']])
-        except KeyError:
-            # If there is a warning on BC Ferries' site, this will catch it
-            # The data should still be accurately updated
-            print("KeyError")
-            continue
+    print(json_data)
 
     return times
 
