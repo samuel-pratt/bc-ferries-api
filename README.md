@@ -1,4 +1,4 @@
-## FerryTimes API - [FerryTimes.ca](https://ferrytimes.ca)
+## FerryTimes API - [api.ferrytimes.ca](https://api.ferrytimes.ca)
 
 The only public API for retrieving current data on BC Ferries sailings.
 
