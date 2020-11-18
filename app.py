@@ -3,6 +3,7 @@
 
 import os
 import json
+from flask_cors import CORS
 from flask import Flask, jsonify, render_template
 from flata import Flata, where
 from flata.storages import JSONStorage
@@ -15,6 +16,7 @@ db.table('table1')
 db.get('table1')
 
 app = Flask(__name__)
+CORS(app)
 
 # Scheduler object
 sched = Scheduler(daemon=True)
