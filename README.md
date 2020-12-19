@@ -64,7 +64,7 @@ Note: destination terminal must correspond with departure terminal, for example 
 "horseshoe-bay": [
     "departure-bay"
     "langdale"
-    "snug-cove-bowen-island"
+    "snug-cove-(bowen-is.)"
 ]
 "langdale": [
     "horseshoe-bay"

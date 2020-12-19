@@ -52,7 +52,7 @@ destination_terminals = {
     "horseshoe-bay": [
         "nanaimo-(dep.bay)",
         "langdale",
-        "snug-cove-bowen-island"
+        "snug-cove-(bowen-is.)"
     ],
     "langdale": [
         "horseshoe-bay"
