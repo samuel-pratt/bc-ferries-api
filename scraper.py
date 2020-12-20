@@ -39,6 +39,9 @@ def get_data():
         },
         "langdale": {
             "horseshoe bay": []
+        },
+        "snug cove (bowen is.)": {
+            "horseshoe bay": [],
         }
     }
 
@@ -55,7 +58,8 @@ def get_data():
         "horseshoe bay to snug cove (bowen is.)": "https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-bowen-island-snug-cove/HSB-BOW",
         "nanaimo (duke pt) to tsawwassen": "https://www.bcferries.com/current-conditions/nanaimo-duke-point-vancouver-tsawwassen/DUK-TSA",
         "langdale to horseshoe bay": "https://www.bcferries.com/current-conditions/sunshine-coast-langdale-vancouver-horseshoe-bay/LNG-HSB",
-        "nanaimo (dep.bay) to horseshoe bay": "https://www.bcferries.com/current-conditions/nanaimo-departure-bay-vancouver-horseshoe-bay/NAN-HSB"
+        "nanaimo (dep.bay) to horseshoe bay": "https://www.bcferries.com/current-conditions/nanaimo-departure-bay-vancouver-horseshoe-bay/NAN-HSB",
+        "snug cove (bowen is.) to horseshoe bay": "https://www.bcferries.com/routes-fares/schedules/-/BOW-HSB"
     }
 
     # Route names
@@ -71,7 +75,8 @@ def get_data():
         "horseshoe bay to snug cove (bowen is.)",
         "nanaimo (duke pt) to tsawwassen",
         "langdale to horseshoe bay",
-        "nanaimo (dep.bay) to horseshoe bay"
+        "nanaimo (dep.bay) to horseshoe bay",
+        "snug cove (bowen is.) to horseshoe bay"
     ]
 
     for route in routes:
@@ -87,21 +92,28 @@ def get_data():
         raw_data = df[0].to_json(orient='records')
         json_data = json.loads(raw_data)[:-1]
 
-        for i in json_data[:]:
-            if len(i['1']) >= 20:
-                json_data.remove(i)
-                continue
-            if 'Status' in i['1'] or 'Arrived' in i['1'] or 'ETA' in i['1']:
-                json_data.remove(i)
+        index = route.split(' to ')
 
-        for i in json_data:
-            sailing_data = {
-                "time": i['0'],
-                "capacity": i['1'].split(' ')[0]
-            }
-            index = route.split(' to ')
+        for i in json_data[:]:
+            if 'Depart' in i.keys():
+                sailing_data = {
+                     "time": i['Depart'],
+                     "capacity": "Unknown"
+                }
+
+            else:
+                if len(i['1']) >= 20:
+                    continue
+                
+                if 'Status' in i['1'] or 'Arrived' in i['1'] or 'ETA' in i['1']:
+                    continue
+
+                sailing_data = {
+                   "time": i['0'],
+                   "capacity": i['1'].split(' ')[0]
+                }
+            
             schedule[index[0]][index[1]].append(sailing_data)
-        
 
     return schedule
 
