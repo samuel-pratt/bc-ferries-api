@@ -119,4 +119,4 @@ def get_data():
 
 # Used for testing
 if __name__ == '__main__':
-    print( get_data() )
+    print(get_data())
