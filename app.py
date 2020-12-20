@@ -30,7 +30,7 @@ departure_terminals = [
     "nanaimo-(dep.bay)",
     "horseshoe-bay",
     "langdale",
-    "snug cove (bowen is.)"
+    "snug-cove-(bowen-is.)"
 ]
 
 # Valid destination terminals
@@ -58,8 +58,8 @@ destination_terminals = {
     "langdale": [
         "horseshoe-bay"
     ],
-    "snug cove (bowen is.)": [
-        "horseshoe bay"
+    "snug-cove-(bowen-is.)": [
+        "horseshoe-bay"
     ]
 }
 
