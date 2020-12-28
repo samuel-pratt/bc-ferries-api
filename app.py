@@ -63,8 +63,8 @@ destination_terminals = {
     ]
 }
 
-# Update data every minute
-@sched.interval_schedule(minutes=1)
+# Update data every 3 minutes
+@sched.interval_schedule(minutes=3)
 def updateDb():
     with app.app_context():
         results = get_data()
