@@ -11,7 +11,7 @@ from apscheduler.scheduler import Scheduler
 from scraper import get_data
 
 # Initialize db
-db = Flata('./db.json', storage=JSONStorage)
+db = Flata('./ferries.json', storage=JSONStorage)
 db.table('table1')
 db.get('table1')
 
@@ -24,42 +24,42 @@ sched.start()
 
 # Valid departure terminals
 departure_terminals = [
-    "tsawwassen",
-    "swartz-bay",
-    "nanaimo-(duke-pt)",
-    "nanaimo-(dep.bay)",
-    "horseshoe-bay",
-    "langdale",
-    "snug-cove-(bowen-is.)"
+    'tsawwassen',
+    'swartz-bay',
+    'nanaimo-(duke-pt)',
+    'nanaimo-(dep.bay)',
+    'horseshoe-bay',
+    'langdale',
+    'snug-cove-(bowen-is.)'
 ]
 
 # Valid destination terminals
 destination_terminals = {
-    "tsawwassen": [
-        "swartz-bay",
-        "southern-gulf-islands",
-        "nanaimo-(duke-pt)"
+    'tsawwassen': [
+        'swartz-bay',
+        'southern-gulf-islands',
+        'nanaimo-(duke-pt)'
     ],
-    "swartz-bay": [
-        "tsawwassen",
-        "fulford-harbour",
+    'swartz-bay': [
+        'tsawwassen',
+        'fulford-harbour',
     ],
-    "nanaimo-(duke-pt)": [
-        "tsawwassen"
+    'nanaimo-(duke-pt)': [
+        'tsawwassen'
     ],
-    "nanaimo-(dep.bay)": [
-        "horseshoe-bay"
+    'nanaimo-(dep.bay)': [
+        'horseshoe-bay'
     ],
-    "horseshoe-bay": [
-        "nanaimo-(dep.bay)",
-        "langdale",
-        "snug-cove-(bowen-is.)"
+    'horseshoe-bay': [
+        'nanaimo-(dep.bay)',
+        'langdale',
+        'snug-cove-(bowen-is.)'
     ],
-    "langdale": [
-        "horseshoe-bay"
+    'langdale': [
+        'horseshoe-bay'
     ],
-    "snug-cove-(bowen-is.)": [
-        "horseshoe-bay"
+    'snug-cove-(bowen-is.)': [
+        'horseshoe-bay'
     ]
 }
 
@@ -69,11 +69,11 @@ def updateDb():
     with app.app_context():
         results = get_data()
         db.table('table1').update({'data': results}, where('id') ==1)
-        print('Updated DB')
+        print('Updated ferries.json')
 
 @app.route('/')
 def home_page():
-    return render_template("index.html")
+    return render_template('index.html')
 
 # Returns all route data
 @app.route('/api/')
@@ -88,7 +88,7 @@ def terminal_data(departure_terminal):
 
     # Check that terminal is valid
     if departure_terminal not in departure_terminals:
-        return jsonify("Error: not a valid departure terminal.")
+        return jsonify('Error: not a valid departure terminal.')
 
     # Format paramater for accessing db
     departure_terminal = departure_terminal.replace('-', ' ')
@@ -104,11 +104,11 @@ def terminals_data(departure_terminal, destination_terminal):
 
     # Check that departure terminal is valid
     if departure_terminal not in departure_terminals:
-        return jsonify("Error: Not a valid departure terminal.")
+        return jsonify('Error: Not a valid departure terminal.')
 
     # Cheheck that destination terminal is valid
     if destination_terminal not in destination_terminals[departure_terminal]:
-        return jsonify("Error: Not a valid destination terminal.")
+        return jsonify('Error: Not a valid destination terminal.')
 
     # Format paramaters for accessing db
     departure_terminal = departure_terminal.replace('-', ' ')
