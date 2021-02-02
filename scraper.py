@@ -100,21 +100,22 @@ def get_data():
                      "time": i['Depart'],
                      "capacity": "Unknown"
                 }
-
             else:
                 if len(i['1']) >= 20:
                     continue
-                
                 if 'Status' in i['1'] or 'Arrived' in i['1'] or 'ETA' in i['1']:
                     continue
-
+                # The very long expression for getting the capacity is due to a few things:
+                # Lets say the returned capacity is 75%.
+                # On the BC Ferries site capacity is listed as deck space remaining, but we want deck space used.
+                # Lets say the site lists a sailing as 75%.
+                # i['1'].split(' ')[0] removes just the string "75%", lets call that x
+                # 100-int(x.split('%')[0]) removes '%' and subracts the number from 100, returning the correct value.
                 sailing_data = {
                    "time": i['0'],
-                   "capacity": i['1'].split(' ')[0]
+                   "capacity": 100-int(i['1'].split(' ')[0].split('%')[0])
                 }
-            
             schedule[index[0]][index[1]].append(sailing_data)
-
     return schedule
 
 # Used for testing
