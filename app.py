@@ -71,10 +71,6 @@ def updateDb():
         db.table('table1').update({'data': results}, where('id') ==1)
         print('Updated ferries.json')
 
-@app.route('/')
-def home_page():
-    return render_template('index.html')
-
 # Returns all route data
 @app.route('/api/')
 def all_data():
@@ -116,6 +112,10 @@ def terminals_data(departure_terminal, destination_terminal):
 
     data = db.all()
     return jsonify(data['table1'][0]['data'][departure_terminal][destination_terminal])
+
+@app.route('/')
+def home_page():
+    return render_template('index.html')
 
 if __name__ == '__main__':
     app.run(debug=True,host='0.0.0.0',port=int(os.environ.get('PORT', 8080)))
