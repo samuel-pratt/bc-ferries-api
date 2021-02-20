@@ -20,11 +20,11 @@ The frontend is made with HTML, Bootstrap, and Javascript. When the user hits th
 
 The api runs on the format:
 
-`https://ferrytimes.ca/api/<departure-terminal>/<destination-terminal>`
+`https://www.ferrytimes.ca/api/<departure-terminal>/<destination-terminal>`
 
 You can be as specific as needed, the fewer arguments there are, the more data you will recieve.
 
-For example, `https://ferrytimes.ca/api/tsawwassen` will return all data for all sailings leaving from Tsawwassen.
+For example, `https://www.ferrytimes.ca/api/tsawwassen` will return all data for all sailings leaving from Tsawwassen.
 
 If the response is empty and shows no errors, it just means there may not be any more sailings for that terminal, this usually happens later at night.
 
