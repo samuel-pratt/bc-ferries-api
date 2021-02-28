@@ -111,10 +111,13 @@ def get_data():
                 # Lets say the site lists a sailing as 75%.
                 # i['1'].split(' ')[0] removes just the string "75%", lets call that x
                 # 100-int(x.split('%')[0]) removes '%' and subracts the number from 100, returning the correct value.
-                if i['1'] == 'Full':
-                    capacity = 'Full'
+                if ':' in i['1']:
+                    capacity = i['1']
                 else:
-                    capacity = 100-int(i['1'].split(' ')[0].split('%')[0])
+                    if i['1'] == 'Full':
+                        capacity = 'Full'
+                    else:
+                        capacity = 100-int(i['1'].split(' ')[0].split('%')[0])
                 sailing_data = {
                    "time": i['0'],
                    "capacity": capacity,
