@@ -118,7 +118,7 @@ def get_data():
                     if i['1'] == 'Full':
                         capacity = 'Full'
                     else:
-                        capacity = 100-int(i['1'].split(' ')[0].split('%')[0])
+                        capacity = str(100-int(i['1'].split(' ')[0].split('%')[0])) + '%'
                 sailing_data = {
                    "time": i['0'],
                    "capacity": capacity,
