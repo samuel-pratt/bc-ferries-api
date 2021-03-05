@@ -119,7 +119,7 @@ def get_data():
                         capacity = 'Full'
                     elif i['1'] == 'Cancelled':
                         capacity = 'Cancelled'
-                    elif:
+                    else:
                         capacity = str(100-int(i['1'].split(' ')[0].split('%')[0])) + '%'
                 sailing_data = {
                    "time": i['0'],
