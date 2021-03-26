@@ -1,6 +1,3 @@
-## Made by Samuel Pratt
-## Victoria, BC, Canada
-
 import json
 import requests
 import pandas as pd

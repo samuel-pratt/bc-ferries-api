@@ -1,6 +1,3 @@
-## Made by Samuel Pratt
-## Victoria, BC, Canada
-
 import os
 import json
 from flask_cors import CORS
