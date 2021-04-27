@@ -100,7 +100,7 @@ def get_data():
                      "time": i['Depart'],
                      "capacity": "Unknown"
                 }
-            elif !i['1']:
+            elif not i['1']:
                 continue
             else:
                 # Not sure the reason for these 2 if statments, cleanup is needed
