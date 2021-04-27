@@ -102,8 +102,6 @@ def get_data():
                 }
             else:
                 # Not sure the reason for these 2 if statments, cleanup is needed
-                if len(i['1']) >= 20:
-                    continue
                 if 'Status' in i['1'] or 'Arrived' in i['1'] or 'ETA' in i['1']:
                     continue
                 # The very long expression for getting the capacity is due to a few things:
