@@ -3,7 +3,7 @@ package main
 // Import OS and fmt packages
 import ( 
 	"fmt" 
-	"os" 
+	"os"
 )
  
 // Let us start
