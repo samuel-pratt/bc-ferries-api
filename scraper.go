@@ -61,8 +61,6 @@ func scraper() Response {
 		{"Horseshoe Bay"},
 	}
 
-	var schedule = make(map[string]map[string][]map[string]string)
-
 	for i := 0; i < len(routeLinks); i++ {
 		// Make HTTP GET request
 		response, err := http.Get(routeLinks[i])
@@ -77,6 +75,7 @@ func scraper() Response {
 			log.Fatal("Error loading HTTP response body. ", err)
 		}
 
+		// Array of times and capacities
 		var times []string
 
 		// Find all <p> tags and save them to array
@@ -98,10 +97,9 @@ func scraper() Response {
 			}
 		})
 
+		var schedule = make(map[string]map[string][]map[string]string)
+
 		// Process array into schedule map
-
-		//sailings := []map[string]string{}
-
 		for j := 0; j < len(times); j += 2 {
 			sailing := map[string]string{}
 			sailing["time"] = times[j]
@@ -115,13 +113,13 @@ func scraper() Response {
 			}
 
 			schedule[departureTerminal][destinationTerminal] = append(schedule[departureTerminal][destinationTerminal], sailing)
-
 		}
 	}
 
 	// Add timestamp to data
 	currentTime := time.Now()
 
+	// Add schedule and timestamp to response object
 	response := Response{
 		Schedule:  schedule,
 		ScrapedAt: currentTime,
