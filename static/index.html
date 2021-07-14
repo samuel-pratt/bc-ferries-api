@@ -1,147 +1,71 @@
 <!DOCTYPE html>
 <html lang="en-US">
 
-  <head>
-    <meta charset='utf-8'>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,maximum-scale=2">
-    <link rel="stylesheet" type="text/css" media="screen" href="/main.css">
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,maximum-scale=2">
+  <link rel="stylesheet" type="text/css" media="screen" href="/main.css">
 
-<!-- Begin Jekyll SEO tag v2.7.1 -->
-<title>BC Ferries API - bcferriesapi.ca | bc-ferries-api</title>
-<meta name="generator" content="Jekyll v3.9.0" />
-<meta property="og:title" content="BC Ferries API - bcferriesapi.ca" />
-<meta property="og:locale" content="en_US" />
-<meta name="description" content="The only public API for retrieving current data on BC Ferries sailings." />
-<meta property="og:description" content="The only public API for retrieving current data on BC Ferries sailings." />
-<link rel="canonical" href="https://samuel-pratt.github.io/bc-ferries-api/" />
-<meta property="og:url" content="https://samuel-pratt.github.io/bc-ferries-api/" />
-<meta property="og:site_name" content="bc-ferries-api" />
-<meta name="twitter:card" content="summary" />
-<meta property="twitter:title" content="BC Ferries API - bcferriesapi.ca" />
-<script type="application/ld+json">
+  <!-- Begin Jekyll SEO tag v2.7.1 -->
+  <title>BC Ferries API - bcferriesapi.ca | bc-ferries-api</title>
+  <meta name="generator" content="Jekyll v3.9.0" />
+  <meta property="og:title" content="BC Ferries API - bcferriesapi.ca" />
+  <meta property="og:locale" content="en_US" />
+  <meta name="description" content="The only public API for retrieving current data on BC Ferries sailings." />
+  <meta property="og:description" content="The only public API for retrieving current data on BC Ferries sailings." />
+  <link rel="canonical" href="https://samuel-pratt.github.io/bc-ferries-api/" />
+  <meta property="og:url" content="https://samuel-pratt.github.io/bc-ferries-api/" />
+  <meta property="og:site_name" content="bc-ferries-api" />
+  <meta name="twitter:card" content="summary" />
+  <meta property="twitter:title" content="BC Ferries API - bcferriesapi.ca" />
+  <script type="application/ld+json">
 {"description":"The only public API for retrieving current data on BC Ferries sailings.","url":"https://samuel-pratt.github.io/bc-ferries-api/","@type":"WebSite","headline":"BC Ferries API - bcferriesapi.ca","name":"bc-ferries-api","@context":"https://schema.org"}</script>
-<!-- End Jekyll SEO tag -->
+  <!-- End Jekyll SEO tag -->
 
-  </head>
+</head>
 
-  <body>
+<body>
 
-    <!-- HEADER -->
-    <div id="header_wrap" class="outer">
-        <header class="inner">
-          <a id="forkme_banner" href="https://github.com/samuel-pratt/bc-ferries-api">View on GitHub</a>
+  <!-- HEADER -->
+  <div id="header_wrap" class="outer">
+    <header class="inner">
+      <a id="forkme_banner" href="https://github.com/samuel-pratt/bc-ferries-api">View on GitHub</a>
 
-          <h1 id="project_title">bc-ferries-api</h1>
-          <h2 id="project_tagline">The only public API for retrieving current data on BC Ferries sailings.</h2>
+      <h1 id="project_title">bc-ferries-api</h1>
+      <h2 id="project_tagline">The only public API for retrieving current data on BC Ferries sailings.</h2>
 
-          
-        </header>
-    </div>
 
-    <!-- MAIN CONTENT -->
-    <div id="main_content_wrap" class="outer">
-      <section id="main_content" class="inner">
-        <h2 id="bc-ferries-api---bcferriesapica">BC Ferries API - <a href="https://bcferriesapi.ca">bcferriesapi.ca</a></h2>
+    </header>
+  </div>
 
-<p>The only public API for retrieving current data on BC Ferries sailings.</p>
+  <!-- MAIN CONTENT -->
+  <div id="main_content_wrap" class="outer">
+    <section id="main_content" class="inner">
+      <h2 id="bc-ferries-api---bcferriesapica">BC Ferries API - <a href="https://bcferriesapi.ca">bcferriesapi.ca</a>
+      </h2>
 
-<h2 id="how-its-made">How It’s Made</h2>
+      <p>This site is not finished, will be updating it to provide more in-depth info over the next week</p>
 
-<p>The api is a flask api connected to a python web scraper. The scraper is made with BeautifulSoup4 and Pandas. It runs every 3 minutes and saves the relevant, formatted data to a json ‘database’ made with flata. When flask recieves a request, it checks the validity of the request, then returns the specified data.</p>
+      <h2 id="api-reference">API Reference</h2>
 
-<p>The frontend is made with HTML, Bootstrap, and Javascript. When the user hits the request button, it runs a small script that calls the api with the user’s request, and displays the info on the page.</p>
+      <p>Access the api by making a request to:</p>
 
-<p><b>Built with</b></p>
+      <p><code class="language-plaintext highlighter-rouge">https://www.bcferriesapi.ca/api/</code></p>
 
-<ul>
-  <li><a href="https://github.com/pallets/flask">Flask</a></li>
-  <li><a href="https://github.com/wention/BeautifulSoup4">BeautifulSoup4</a></li>
-  <li><a href="https://github.com/pandas-dev/pandashttps://github.com/pandas-dev/pandas">Pandas</a></li>
-  <li><a href="https://github.com/twbs/bootstrap">Bootstrap</a></li>
-  <li><a href="https://github.com/harryho/flata">Flata</a></li>
-</ul>
+      <p>If you find an issue with the API, please <a
+          href="https://github.com/samuel-pratt/bc-ferries-api/issues/new">submit an issue</a></p>
 
-<h2 id="api-reference">API Reference</h2>
+    </section>
+  </div>
 
-<p>The api runs on the format:</p>
+  <!-- FOOTER  -->
+  <div id="footer_wrap" class="outer">
+    <footer class="inner">
+      <p class="copyright">bc-ferries-api maintained by <a href="https://github.com/samuel-pratt">samuel-pratt</a></p>
+      <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+    </footer>
+  </div>
+</body>
 
-<p><code class="language-plaintext highlighter-rouge">https://www.bcferriesapi.ca/api/&lt;departure-terminal&gt;/&lt;destination-terminal&gt;</code></p>
-
-<p>You can be as specific as needed, the fewer arguments there are, the more data you will recieve.</p>
-
-<p>For example, <code class="language-plaintext highlighter-rouge">https://www.bcferriesapi.ca/api/tsawwassen</code> will return all data for all sailings leaving from Tsawwassen.</p>
-
-<p>If the response is empty and shows no errors, it just means there may not be any more sailings for that terminal, this usually happens later at night.</p>
-
-<p>Options for each are as follows:</p>
-
-<h4 id="departure-terminal">departure-terminal</h4>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>"tsawwassen"
-"swartz-bay"
-"nanaimo-(duke-pt)"
-"nanaimo-(dep.bay)"
-"horseshoe-bay"
-"langdale"
-"snug-cove-(bowen-is.)"
-</code></pre></div></div>
-
-<h4 id="destination-terminal">destination-terminal</h4>
-
-<p>Note: destination terminal must correspond with departure terminal, for example you can’t put tsawwassen to langdale, it will return an error.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>"tsawwassen": [
-    "swartz-bay"
-    "southern-gulf-islands"
-    "duke-point"
-]
-"swartz-bay": [
-    "tsawwassen"
-    "fulford-harbour"
-]
-"nanaimo-(duke-pt)": [
-    "tsawwassen"
-]
-"nanaimo-(dep.bay)": [
-    "horseshoe-bay"
-]
-"horseshoe-bay": [
-    "departure-bay"
-    "langdale"
-    "snug-cove-(bowen-is.)"
-]
-"langdale": [
-    "horseshoe-bay"
-]
-"snug-cove-(bowen-is.)": [
-    "horseshoe-bay"
-]
-</code></pre></div></div>
-
-<h4 id="errors">Errors</h4>
-
-<p>If any of the parameters are not from the above, you will see one of the following errors:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>"Error: Not a valid departure terminal."
-"Error: Not a valid destination terminal."
-</code></pre></div></div>
-
-<p>If you see an error not included in this list, there may be an issue with the API, please <a href="https://github.com/samuel-pratt/bc-ferries-api/issues/new">submit an issue</a></p>
-
-      </section>
-    </div>
-
-    <!-- FOOTER  -->
-    <div id="footer_wrap" class="outer">
-      <footer class="inner">
-        
-        <p class="copyright">bc-ferries-api maintained by <a href="https://github.com/samuel-pratt">samuel-pratt</a></p>
-        
-        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
-      </footer>
-    </div>
-
-    
-  </body>
 </html>
