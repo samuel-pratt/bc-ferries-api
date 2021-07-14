@@ -61,6 +61,8 @@ func scraper() Response {
 		{"Horseshoe Bay"},
 	}
 
+	var schedule = make(map[string]map[string][]map[string]string)
+
 	for i := 0; i < len(routeLinks); i++ {
 		// Make HTTP GET request
 		response, err := http.Get(routeLinks[i])
@@ -96,8 +98,6 @@ func scraper() Response {
 				times = append(times, text)
 			}
 		})
-
-		var schedule = make(map[string]map[string][]map[string]string)
 
 		// Process array into schedule map
 		for j := 0; j < len(times); j += 2 {
