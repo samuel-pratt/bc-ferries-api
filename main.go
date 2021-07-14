@@ -38,5 +38,11 @@ func main() {
 
 	http.HandleFunc("/api/", getDataFromFile)
 	http.Handle("/", http.FileServer(http.Dir("./static")))
-	http.ListenAndServe(os.Getenv("PORT")	, nil)
+
+	port := os.Getenv("PORT")
+	if port == "" {
+			port = "9000" // Default port if not specified
+	}
+	
+	http.ListenAndServe(":" + port	, nil)
 }
