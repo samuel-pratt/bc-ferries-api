@@ -1,1 +1,1 @@
-web: webapphr
+web: bc-ferries-api
