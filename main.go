@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/robfig/cron"
@@ -37,5 +38,5 @@ func main() {
 
 	http.HandleFunc("/api/", getDataFromFile)
 	http.Handle("/", http.FileServer(http.Dir("./static")))
-	http.ListenAndServe(":10000", nil)
+	http.ListenAndServe(os.Getenv("PORT")	, nil)
 }
