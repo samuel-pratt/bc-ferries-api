@@ -64,10 +64,6 @@
       <div class="col-sm-3 col-lg-3 col-md-3">
       </div>
     </div>
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js" 2
-      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" 3
-      crossorigin="anonymous"></script>
-    <script src="jquery.json-editor.min.js"></script>
     <script>
       function update(call) {
         jQuery('#interactive').val(call);
@@ -84,9 +80,7 @@
         }).complete(function (data) {
           if (data['status'] == 200) {
             var d = jQuery.parseJSON(data['responseText']);
-            var editor = new JsonEditor('#interactive_output', { editable: false });
-            editor.load(d);
-            document.getElementById('interactive_output').setAttribute("contenteditable", false);
+            jQuery('#interactive_output').text(JSON.stringify(d, null, '\t'));
           } else if (data['status'] == 404) {
             jQuery('#interactive_output').text(data['status'] + ' ' + data['statusText']);
           }
