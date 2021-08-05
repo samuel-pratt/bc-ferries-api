@@ -47,7 +47,7 @@ func getDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.
 		"Horseshoe-Bay",
 		"Nanaimo-(Duke-pt)",
 		"Langdale",
-		"Nanaimo-(Dep.-Bay)",
+		"Nanaimo-(Dep-Bay)",
 	}
 
 	// Get url paramaters
@@ -76,14 +76,14 @@ func getDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 		"Horseshoe-Bay",
 		"Nanaimo-(Duke-pt.)",
 		"Langdale",
-		"Nanaimo-(Dep.-Bay)",
+		"Nanaimo-(Dep-Bay)",
 	}
 
 
 	destinationTerminals := [6][]string{
-		{"Swartz-Bay", "Southern-Gulf-Islands", "Nanaimo-(Duke-pt.)"},
+		{"Swartz-Bay", "Southern-Gulf-Islands", "Nanaimo-(Duke-pt)"},
 		{"Tsawwassen", "Fulford-Habrbour-(Saltspring)", "Southern-Gulf-Islands"},
-		{"Nanaimo-(Dep.-Bay)", "Langdale", "Snug-Cove-(Bowen)"},
+		{"Nanaimo-(Dep-Bay)", "Langdale", "Snug-Cove-(Bowen)"},
 		{"Tsawwassen"},
 		{"Horseshoe-Bay"},
 		{"Horseshoe-Bay"},
