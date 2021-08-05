@@ -41,24 +41,24 @@ func scraper() Response {
 	routeIndex := [12]int{0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 4, 5}
 
 	departureTerminals := [6]string{
-		"Tsawwassen",
-		"Swartz Bay",
-		"Horseshoe Bay",
-		"Nanaimo (Duke pt.)",
-		"Langdale",
-		"Nanaimo (Dep. Bay)",
+		"tsawwassen",
+		"swartz-bay",
+		"horseshoe-bay",
+		"nanaimo-(duke-pt)",
+		"langdale",
+		"nanaimo-(dep-bay)",
 	}
 
 	// Tracks the correlating indexes between route links and destinationTerminals
 	destinationIndex := [12]int{0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 0, 0}
 
 	destinationTerminals := [6][]string{
-		{"Swartz Bay", "Southern Gulf Islands", "Nanaimo (Duke pt.)"},
-		{"Tsawwassen", "Fulford Habrbour (Saltspring)", "Southern Gulf Islands"},
-		{"Nanaimo (Dep. Bay)", "Langdale", "Snug Cove (Bowen)"},
-		{"Tsawwassen"},
-		{"Horseshoe Bay"},
-		{"Horseshoe Bay"},
+		{"swartz-bay", "southern-gulf-islands", "nanaimo-(duke-pt)"},
+		{"tsawwassen", "fulford-habrbour-(saltspring)", "southern-gulf-islands"},
+		{"nanaimo-(dep-bay)", "langdale", "snug-cove-(bowen)"},
+		{"tsawwassen"},
+		{"horseshoe-bay"},
+		{"horseshoe-bay"},
 	}
 
 	var schedule = make(map[string]map[string][]map[string]string)

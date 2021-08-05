@@ -1,70 +1,98 @@
 <!DOCTYPE html>
-<html lang="en-US">
+<html lang="en">
 
 <head>
-  <meta charset='utf-8'>
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width,maximum-scale=2">
-  <link rel="stylesheet" type="text/css" media="screen" href="/main.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>
+    FerryTimes
+  </title>
 
-  <!-- Begin Jekyll SEO tag v2.7.1 -->
-  <title>BC Ferries API - bcferriesapi.ca | bc-ferries-api</title>
-  <meta name="generator" content="Jekyll v3.9.0" />
-  <meta property="og:title" content="BC Ferries API - bcferriesapi.ca" />
-  <meta property="og:locale" content="en_US" />
-  <meta name="description" content="The only public API for retrieving current data on BC Ferries sailings." />
-  <meta property="og:description" content="The only public API for retrieving current data on BC Ferries sailings." />
-  <link rel="canonical" href="https://samuel-pratt.github.io/bc-ferries-api/" />
-  <meta property="og:url" content="https://samuel-pratt.github.io/bc-ferries-api/" />
-  <meta property="og:site_name" content="bc-ferries-api" />
-  <meta name="twitter:card" content="summary" />
-  <meta property="twitter:title" content="BC Ferries API - bcferriesapi.ca" />
-  <script type="application/ld+json">
-{"description":"The only public API for retrieving current data on BC Ferries sailings.","url":"https://samuel-pratt.github.io/bc-ferries-api/","@type":"WebSite","headline":"BC Ferries API - bcferriesapi.ca","name":"bc-ferries-api","@context":"https://schema.org"}</script>
-  <!-- End Jekyll SEO tag -->
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+  <link rel="shortcut icon" href="/static/favicon.ico">
 
+  <script src="//code.jquery.com/jquery-2.1.0.min.js"></script>
+  <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
 </head>
 
 <body>
+  <div class="container-fluid">
+    <div class="row center yellow ">
+      <div class="jumbotron" style="text-align: center;">
+        <h1>FerryTimes</h1>
+        <p class="lead">The only public BC ferries API</p>
+        <p class="lead"><a href="https://github.com/samuel-pratt/ferry-times-api/">GitHub</a></p>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-sm-2 col-lg-2 col-md-2"></div>
+      <div class="col-lg-8 col-md-8 col-sm-8">
+        <h1 class="center">
+          Try it now!
+        </h1>
+        <div class="input-group">
+          <span class="input-group-addon">https://www.ferrytimes.ca/api/</span>
+          <input id="interactive" type="text" class="form-control" placeholder="tsawwassen/swartz-bay">
+          <span class="input-group-btn"><button onClick="interactive_call();return false;"
+              class="btn btn-primary">request</button></span>
+        </div>
+        <small>Need a hint? try <a href="#" onClick="update('tsawwassen/');return false;"><i>tsawwassen/</i></a> or <a
+            href="#"
+            onClick="update('nanaimo-(dep.bay)/horseshoe-bay/');return false;"><i>nanaimo-(dep.bay)/horseshoe-bay/</i></a></small>
+        <p class="lead pad_top">Result:</p>
+        <div class="well">
+          <pre id="interactive_output" class="pre-scrollable">Send a request to see the response here!</pre>
+        </div>
+      </div>
+      <div class="col-sm-2 col-lg-2 col-md-2">
+      </div>
+    </div>
+    <div class="row pad_bot">
+      <div class="col-sm-3 col-lg-3 col-md-3">
+      </div>
+      <div class="col-sm-3 col-lg-3 col-md-3">
+        <h4 class="center">How can I use it?</h4>
+        <p>All the data is accessible through our HTTP web API. Consult the <a
+            href="https://github.com/samuel-pratt/bc-ferries-api/blob/master/README.md">ReadMe</a> if you'd like to get
+          started.</p>
+      </div>
+      <div class="col-sm-3 col-lg-3 col-md-3">
+        <h4 class="center">Is there an issue?</h4>
+        <p>If something isn't working, submit an issue <a
+            href="https://github.com/samuel-pratt/bc-ferries-api/issues/new">on GitHub</a></p>
+      </div>
+      <div class="col-sm-3 col-lg-3 col-md-3">
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" 2
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" 3
+      crossorigin="anonymous"></script>
+    <script src="jquery.json-editor.min.js"></script>
+    <script>
+      function update(call) {
+        jQuery('#interactive').val(call);
+        interactive_call();
+      }
 
-  <!-- HEADER -->
-  <div id="header_wrap" class="outer">
-    <header class="inner">
-      <a id="forkme_banner" href="https://github.com/samuel-pratt/bc-ferries-api">View on GitHub</a>
-
-      <h1 id="project_title">bc-ferries-api</h1>
-      <h2 id="project_tagline">The only public API for retrieving current data on BC Ferries sailings.</h2>
-
-
-    </header>
-  </div>
-
-  <!-- MAIN CONTENT -->
-  <div id="main_content_wrap" class="outer">
-    <section id="main_content" class="inner">
-      <h2 id="bc-ferries-api---bcferriesapica">BC Ferries API - <a href="https://bcferriesapi.ca">bcferriesapi.ca</a>
-      </h2>
-
-      <p>This site is not finished, will be updating it to provide more in-depth info over the next week</p>
-
-      <h2 id="api-reference">API Reference</h2>
-
-      <p>Access the api by making a request to:</p>
-
-      <p><code class="language-plaintext highlighter-rouge">https://www.bcferriesapi.ca/api/</code></p>
-
-      <p>If you find an issue with the API, please <a
-          href="https://github.com/samuel-pratt/bc-ferries-api/issues/new">submit an issue</a></p>
-
-    </section>
-  </div>
-
-  <!-- FOOTER  -->
-  <div id="footer_wrap" class="outer">
-    <footer class="inner">
-      <p class="copyright">bc-ferries-api maintained by <a href="https://github.com/samuel-pratt">samuel-pratt</a></p>
-      <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
-    </footer>
+      function interactive_call() {
+        var content = jQuery('#interactive').val()
+        var call_url = 'api/' + content;
+        jQuery.ajax({
+          dataType: 'json',
+          url: call_url,
+          context: document.body
+        }).complete(function (data) {
+          if (data['status'] == 200) {
+            var d = jQuery.parseJSON(data['responseText']);
+            var editor = new JsonEditor('#interactive_output', { editable: false });
+            editor.load(d);
+            document.getElementById('interactive_output').setAttribute("contenteditable", false);
+          } else if (data['status'] == 404) {
+            jQuery('#interactive_output').text(data['status'] + ' ' + data['statusText']);
+          }
+        });
+      }
+    </script>
   </div>
 </body>
 
