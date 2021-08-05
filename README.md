@@ -69,7 +69,7 @@ Note: destination terminal must correspond with departure terminal, for example 
 
 #### Errors (Not currently implemented)
 
-For now, the epi will not return custom error messages, it will just return a 404.
+For now, the api will not return custom error messages, it will just return a 404.
 
 If any of the parameters are not from the above, you will see one of the following errors:
 
