@@ -88,8 +88,10 @@ func scraper() Response {
 				// Get text
 				text := element.Text()
 
-				// Remove tomorrow text
-				text = strings.ReplaceAll(text, "(Tomorrow)", "")
+				// Remove text after time
+				if len(text) > 8 {
+					text = text[:8]
+				}
 
 				// Remove trailing whitespace
 				text = strings.TrimSpace(text)
@@ -102,7 +104,7 @@ func scraper() Response {
 		// Process array into schedule map
 		for j := 0; j < len(times); j += 2 {
 			sailing := map[string]string{}
-			sailing["time"] = strings.TrimSpace(times[j])
+			sailing["time"] = times[j]
 			sailing["capacity"] = times[j+1]
 
 			departureTerminal := departureTerminals[routeIndex[i]]
