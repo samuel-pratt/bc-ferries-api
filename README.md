@@ -2,6 +2,8 @@
 
 The only public API for retrieving current data on BC Ferries sailings.
 
+NOTE: there's a small issue witht the site not hot reloading right now, the api is still fully functional.
+
 ## How It's Made
 
 BC Ferries API is a Go api connected to a web scraper. The scraper is made with Goquerey. It runs every 3 minutes and saves the relevant, formatted data to a json file. When the api recieves a request, it checks the validity of the request, then returns the specified data.
