@@ -31,7 +31,6 @@ Options for each are as follows:
 "nanaimo-(dep.bay)"
 "horseshoe-bay"
 "langdale"
-"snug-cove-(bowen-is.)"
 ```
 
 #### destination-terminal
@@ -60,9 +59,6 @@ Note: destination terminal must correspond with departure terminal, for example 
     "snug-cove-(bowen-is.)"
 ]
 "langdale": [
-    "horseshoe-bay"
-]
-"snug-cove-(bowen-is.)": [
     "horseshoe-bay"
 ]
 ```
