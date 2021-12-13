@@ -102,7 +102,7 @@ func scraper() Response {
 		// Process array into schedule map
 		for j := 0; j < len(times); j += 2 {
 			sailing := map[string]string{}
-			sailing["time"] = times[j]
+			sailing["time"] = strings.TrimSpace(times[j])
 			sailing["capacity"] = times[j+1]
 
 			departureTerminal := departureTerminals[routeIndex[i]]
