@@ -20,7 +20,7 @@ You can be as specific as needed, the fewer arguments there are, the more data y
 
 For example, `https://www.bcferriesapi.ca/api/tsawwassen` will return all data for all sailings leaving from Tsawwassen.
 
-If the response is empty and shows no errors, it just means there may not be any more sailings for that terminal, this usually happens later at night.
+A request to `https://www.bcferriesapi.ca/api/` will return a full schedule for all terminals.
 
 Options for each are as follows:
 
