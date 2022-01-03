@@ -1,6 +1,6 @@
 ## BC Ferries API - [bcferriesapi.ca](https://bcferriesapi.ca)
 
-The only public API for retrieving current data on BC Ferries sailings.
+🛳 The only public API for retrieving current data on BC Ferries sailings.
 
 NOTE: there's a small issue witht the site not hot reloading right now, the api is still fully functional.
 
