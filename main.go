@@ -96,10 +96,12 @@ func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 	for i := 0; i < len(departureTerminals); i++ {
 		if strings.EqualFold(departureTerminal, departureTerminals[i]) {
 			for j := 0; j < len(destinationTerminals[j]); j++ {
-				schedule := gjson.Get(string(data), "schedule."+strings.ToLower(departureTerminal)+"."+strings.ToLower(destinationTerminal))
+				if strings.EqualFold(destinationTerminal, destinationTerminals[i][j]) {
+					schedule := gjson.Get(string(data), "schedule."+strings.ToLower(departureTerminal)+"."+strings.ToLower(destinationTerminal))
 
-				w.Header().Set("Content-Type", "application/json")
-				w.Write([]byte(schedule.String()))
+					w.Header().Set("Content-Type", "application/json")
+					w.Write([]byte(schedule.String()))
+				}
 			}
 		}
 	}
@@ -107,7 +109,7 @@ func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 
 func main() {
 	// Create new schedule at startup
-	Scraper()
+	UpdateSchedule()
 
 	// Schedule update every hour
 	c := cron.New()
