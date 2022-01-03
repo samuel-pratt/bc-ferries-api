@@ -95,7 +95,7 @@ func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 	// Find if departureTerminal is in departureTerminals
 	for i := 0; i < len(departureTerminals); i++ {
 		if strings.EqualFold(departureTerminal, departureTerminals[i]) {
-			for j := 0; j < len(destinationTerminals[j]); j++ {
+			for j := 0; j < len(destinationTerminals[i]); j++ {
 				if strings.EqualFold(destinationTerminal, destinationTerminals[i][j]) {
 					schedule := gjson.Get(string(data), "schedule."+strings.ToLower(departureTerminal)+"."+strings.ToLower(destinationTerminal))
 
