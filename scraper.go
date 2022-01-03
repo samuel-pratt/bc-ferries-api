@@ -96,6 +96,12 @@ func Scraper() Response {
 					text = text[:15]
 				}
 
+				text = strings.TrimSpace(text)
+
+				if text == "" {
+					text = "Cancelled"
+				}
+
 				// Save times
 				times = append(times, text)
 			}
@@ -104,8 +110,8 @@ func Scraper() Response {
 		// Process array into schedule map
 		for j := 0; j < len(times); j += 2 {
 			sailing := map[string]string{}
-			sailing["time"] = strings.TrimSpace(times[j])
-			sailing["capacity"] = strings.TrimSpace(times[j+1])
+			sailing["time"] = times[j]
+			sailing["capacity"] = times[j+1]
 
 			departureTerminal := departureTerminals[routeIndex[i]]
 			destinationTerminal := destinationTerminals[routeIndex[i]][destinationIndex[i]]
