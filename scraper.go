@@ -15,7 +15,7 @@ type Response struct {
 	ScrapedAt time.Time                                 `json:"scrapedAt"`
 }
 
-func scraper() Response {
+func Scraper() Response {
 	// Links to individual schedule pages
 	routeLinks := [12]string{
 		"https://www.bcferries.com/current-conditions/vancouver-tsawwassen-victoria-swartz-bay/TSA-SWB",
@@ -88,13 +88,13 @@ func scraper() Response {
 				// Get text
 				text := element.Text()
 
-				// Remove text after time
-				if len(text) > 8 {
-					text = text[:8]
-				}
-
 				// Remove trailing whitespace
 				text = strings.TrimSpace(text)
+
+				// Remove text after time
+				if len(text) > 15 {
+					text = text[:15]
+				}
 
 				// Save times
 				times = append(times, text)
@@ -104,8 +104,8 @@ func scraper() Response {
 		// Process array into schedule map
 		for j := 0; j < len(times); j += 2 {
 			sailing := map[string]string{}
-			sailing["time"] = times[j]
-			sailing["capacity"] = times[j+1]
+			sailing["time"] = strings.TrimSpace(times[j])
+			sailing["capacity"] = strings.TrimSpace(times[j+1])
 
 			departureTerminal := departureTerminals[routeIndex[i]]
 			destinationTerminal := destinationTerminals[routeIndex[i]][destinationIndex[i]]

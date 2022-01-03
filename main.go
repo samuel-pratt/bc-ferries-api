@@ -14,8 +14,8 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-func updateSchedule() {
-	response := scraper()
+func UpdateSchedule() {
+	response := Scraper()
 	jsonString, _ := json.Marshal(response)
 	err := ioutil.WriteFile("sailings.json", []byte(jsonString), 0644)
 	if err != nil {
@@ -25,7 +25,7 @@ func updateSchedule() {
 	fmt.Println(time.Now())
 }
 
-func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func GetAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	data, err := ioutil.ReadFile("sailings.json")
 	if err != nil {
 		fmt.Println(err)
@@ -35,7 +35,7 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	w.Write(data)
 }
 
-func getDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func GetDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	data, err := ioutil.ReadFile("sailings.json")
 	if err != nil {
 		fmt.Println(err)
@@ -64,7 +64,7 @@ func getDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.
 	}
 }
 
-func getDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	data, err := ioutil.ReadFile("sailings.json")
 	if err != nil {
 		fmt.Println(err)
@@ -106,17 +106,20 @@ func getDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 }
 
 func main() {
+	// Create new schedule at startup
+	Scraper()
+
 	// Schedule update every hour
 	c := cron.New()
-	c.AddFunc("@every 1m", updateSchedule)
+	c.AddFunc("@every 1m", UpdateSchedule)
 	c.Start()
 
 	router := httprouter.New()
 
 	// Root api call
-	router.GET("/api/", getAll)
-	router.GET("/api/:departureTerminal/", getDepartureTerminal)
-	router.GET("/api/:departureTerminal/:destinationTerminal/", getDestinationTerminal)
+	router.GET("/api/", GetAll)
+	router.GET("/api/:departureTerminal/", GetDepartureTerminal)
+	router.GET("/api/:departureTerminal/:destinationTerminal/", GetDestinationTerminal)
 
 	// Home page
 	router.NotFound = http.FileServer(http.Dir("./static"))
