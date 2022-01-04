@@ -1,6 +1,9 @@
 # MacOS
 .DS_Store
 
+# Environment variables
+.env
+
 # Build
 bc-ferries-api
 sailings.json
