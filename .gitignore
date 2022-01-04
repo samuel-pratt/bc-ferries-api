@@ -1,4 +1,6 @@
+# MacOS
 .DS_Store
 
+# Build
 bc-ferries-api
 sailings.json
