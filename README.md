@@ -24,7 +24,7 @@ A request to `https://www.bcferriesapi.ca/api/` will return a full schedule for 
 
 Options for each are as follows:
 
-#### departure-terminal
+### departure-terminal
 
 ```
 "tsawwassen"
@@ -35,7 +35,7 @@ Options for each are as follows:
 "langdale"
 ```
 
-#### destination-terminal
+### destination-terminal
 
 Note: destination terminal must correspond with departure terminal, for example you can't put tsawwassen to langdale, it will return an error.
 
@@ -64,16 +64,3 @@ Note: destination terminal must correspond with departure terminal, for example 
     "horseshoe-bay"
 ]
 ```
-
-#### Errors (Not currently implemented)
-
-For now, the api will not return custom error messages, it will just return a 404.
-
-If any of the parameters are not from the above, you will see one of the following errors:
-
-```
-"Error: Not a valid departure terminal."
-"Error: Not a valid destination terminal."
-```
-
-If you see an error not included in this list, there may be an issue with the API, please [submit an issue](https://github.com/samuel-pratt/bc-ferries-api/issues/new)

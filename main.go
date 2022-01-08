@@ -60,8 +60,11 @@ func GetDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.
 
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(schedule.String()))
+			return
 		}
 	}
+
+	w.WriteHeader(http.StatusNotFound)
 }
 
 func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -101,10 +104,13 @@ func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 
 					w.Header().Set("Content-Type", "application/json")
 					w.Write([]byte(schedule.String()))
+					return
 				}
 			}
 		}
 	}
+
+	w.WriteHeader(http.StatusNotFound)
 }
 
 func main() {
