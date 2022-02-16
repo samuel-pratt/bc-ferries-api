@@ -42,12 +42,12 @@ func GetDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.
 	}
 
 	departureTerminals := [6]string{
-		"Tsawwassen",
-		"Swartz-Bay",
-		"Horseshoe-Bay",
-		"Nanaimo-(Duke-pt)",
-		"Langdale",
-		"Nanaimo-(Dep-Bay)",
+		"TSA",
+		"SWB",
+		"HSB",
+		"DUK",
+		"LNG",
+		"NAN",
 	}
 
 	// Get url paramaters
@@ -56,7 +56,7 @@ func GetDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.
 	// Find if departureTerminal is in departureTerminals
 	for i := 0; i < len(departureTerminals); i++ {
 		if strings.EqualFold(departureTerminal, departureTerminals[i]) {
-			schedule := gjson.Get(string(data), "schedule."+strings.ToLower(departureTerminal))
+			schedule := gjson.Get(string(data), "schedule."+strings.ToUpper(departureTerminal))
 
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(schedule.String()))
@@ -74,21 +74,21 @@ func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 	}
 
 	departureTerminals := [6]string{
-		"Tsawwassen",
-		"Swartz-Bay",
-		"Horseshoe-Bay",
-		"Nanaimo-(Duke-pt.)",
-		"Langdale",
-		"Nanaimo-(Dep-Bay)",
+		"TSA",
+		"SWB",
+		"HSB",
+		"DUK",
+		"LNG",
+		"NAN",
 	}
 
 	destinationTerminals := [6][]string{
-		{"Swartz-Bay", "Southern-Gulf-Islands", "Nanaimo-(Duke-pt)"},
-		{"Tsawwassen", "Fulford-Habrbour-(Saltspring)", "Southern-Gulf-Islands"},
-		{"Nanaimo-(Dep-Bay)", "Langdale", "Snug-Cove-(Bowen)"},
-		{"Tsawwassen"},
-		{"Horseshoe-Bay"},
-		{"Horseshoe-Bay"},
+		{"SWB", "SGU", "DUK"},
+		{"TSA", "FUL", "SGI"},
+		{"NAN", "LNG", "BOW"},
+		{"TSA"},
+		{"HSB"},
+		{"HSB"},
 	}
 
 	// Get url paramaters
@@ -100,7 +100,7 @@ func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 		if strings.EqualFold(departureTerminal, departureTerminals[i]) {
 			for j := 0; j < len(destinationTerminals[i]); j++ {
 				if strings.EqualFold(destinationTerminal, destinationTerminals[i][j]) {
-					schedule := gjson.Get(string(data), "schedule."+strings.ToLower(departureTerminal)+"."+strings.ToLower(destinationTerminal))
+					schedule := gjson.Get(string(data), "schedule."+strings.ToUpper(departureTerminal)+"."+strings.ToUpper(destinationTerminal))
 
 					w.Header().Set("Content-Type", "application/json")
 					w.Write([]byte(schedule.String()))

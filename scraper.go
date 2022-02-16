@@ -18,47 +18,47 @@ type Response struct {
 func Scraper() Response {
 	// Links to individual schedule pages
 	routeLinks := [12]string{
-		"https://www.bcferries.com/current-conditions/vancouver-tsawwassen-victoria-swartz-bay/TSA-SWB",
-		"https://www.bcferries.com/current-conditions/vancouver-tsawwassen-southern-gulf-islands/TSA-SGI",
-		"https://www.bcferries.com/current-conditions/vancouver-tsawwassen-nanaimo-duke-point/TSA-DUK",
+		"https://www.bcferries.com/current-conditions/TSA-SWB",
+		"https://www.bcferries.com/current-conditions/TSA-SGI",
+		"https://www.bcferries.com/current-conditions/TSA-DUK",
 
-		"https://www.bcferries.com/current-conditions/victoria-swartz-bay-vancouver-tsawwassen/SWB-TSA",
-		"https://www.bcferries.com/current-conditions/victoria-swartz-bay-salt-spring-island-fulford-harbour/SWB-FUL",
-		"https://www.bcferries.com/current-conditions/victoria-swartz-bay-southern-gulf-islands/SWB-SGI",
+		"https://www.bcferries.com/current-conditions/SWB-TSA",
+		"https://www.bcferries.com/current-conditions/SWB-FUL",
+		"https://www.bcferries.com/current-conditions/SWB-SGI",
 
-		"https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-nanaimo-departure-bay/HSB-NAN",
-		"https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-sunshine-coast-langdale/HSB-LNG",
-		"https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-bowen-island-snug-cove/HSB-BOW",
+		"https://www.bcferries.com/current-conditions/HSB-NAN",
+		"https://www.bcferries.com/current-conditions/HSB-LNG",
+		"https://www.bcferries.com/current-conditions/HSB-BOW",
 
-		"https://www.bcferries.com/current-conditions/nanaimo-duke-point-vancouver-tsawwassen/DUK-TSA",
+		"https://www.bcferries.com/current-conditions/DUK-TSA",
 
-		"https://www.bcferries.com/current-conditions/sunshine-coast-langdale-vancouver-horseshoe-bay/LNG-HSB",
+		"https://www.bcferries.com/current-conditions/LNG-HSB",
 
-		"https://www.bcferries.com/current-conditions/nanaimo-departure-bay-vancouver-horseshoe-bay/NAN-HSB",
+		"https://www.bcferries.com/current-conditions/NAN-HSB",
 	}
 
 	// Tracks the correlating indexes between routeLinks and departureTerminals
 	routeIndex := [12]int{0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 4, 5}
 
 	departureTerminals := [6]string{
-		"tsawwassen",
-		"swartz-bay",
-		"horseshoe-bay",
-		"nanaimo-(duke-pt)",
-		"langdale",
-		"nanaimo-(dep-bay)",
+		"TSA",
+		"SWB",
+		"HSB",
+		"DUK",
+		"LNG",
+		"NAN",
 	}
 
 	// Tracks the correlating indexes between route links and destinationTerminals
 	destinationIndex := [12]int{0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 0, 0}
 
 	destinationTerminals := [6][]string{
-		{"swartz-bay", "southern-gulf-islands", "nanaimo-(duke-pt)"},
-		{"tsawwassen", "fulford-habrbour-(saltspring)", "southern-gulf-islands"},
-		{"nanaimo-(dep-bay)", "langdale", "snug-cove-(bowen)"},
-		{"tsawwassen"},
-		{"horseshoe-bay"},
-		{"horseshoe-bay"},
+		{"SWB", "SGU", "DUK"},
+		{"TSA", "FUL", "SGI"},
+		{"NAN", "LNG", "BOW"},
+		{"TSA"},
+		{"HSB"},
+		{"HSB"},
 	}
 
 	var schedule = make(map[string]map[string][]map[string]string)
