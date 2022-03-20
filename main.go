@@ -15,7 +15,7 @@ import (
 )
 
 func UpdateSchedule() {
-	response := Scraper()
+	response := ScrapeCapacityRoutes()
 	jsonString, _ := json.Marshal(response)
 	err := ioutil.WriteFile("sailings.json", []byte(jsonString), 0644)
 	if err != nil {

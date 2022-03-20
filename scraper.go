@@ -4,6 +4,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,9 +16,9 @@ type Response struct {
 	ScrapedAt time.Time                                 `json:"scrapedAt"`
 }
 
-func Scraper() Response {
+func ScrapeCapacityRoutes() Response {
 	// Links to individual schedule pages
-	routeLinks := [12]string{
+	capacityRouteLinks := [12]string{
 		"https://www.bcferries.com/current-conditions/TSA-SWB",
 		"https://www.bcferries.com/current-conditions/TSA-SGI",
 		"https://www.bcferries.com/current-conditions/TSA-DUK",
@@ -63,9 +64,9 @@ func Scraper() Response {
 
 	var schedule = make(map[string]map[string][]map[string]string)
 
-	for i := 0; i < len(routeLinks); i++ {
+	for i := 0; i < len(capacityRouteLinks); i++ {
 		// Make HTTP GET request
-		response, err := http.Get(routeLinks[i])
+		response, err := http.Get(capacityRouteLinks[i])
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -111,7 +112,14 @@ func Scraper() Response {
 		for j := 0; j < len(times); j += 2 {
 			sailing := map[string]string{}
 			sailing["time"] = times[j]
-			sailing["capacity"] = times[j+1]
+
+			capacity, err := strconv.Atoi(strings.Split(times[j+1], "%")[0])
+
+			if err == nil {
+				sailing["capacity"] = strconv.Itoa(100 - capacity)
+			} else {
+				sailing["capacity"] = times[j+1]
+			}
 
 			departureTerminal := departureTerminals[routeIndex[i]]
 			destinationTerminal := destinationTerminals[routeIndex[i]][destinationIndex[i]]
@@ -135,3 +143,114 @@ func Scraper() Response {
 
 	return response
 }
+
+/*
+func ScrapeNonCapacityRoutes(link string) {
+	nonCapacityRouteLinks := []string{
+		// Metro Vancouver
+		"https://www.bcferries.com/routes-fares/schedules/daily/HSB-NAN",
+		"https://www.bcferries.com/routes-fares/schedules/daily/BOW-HSB",
+		"https://www.bcferries.com/routes-fares/schedules/daily/HSB-BOW",
+		"https://www.bcferries.com/routes-fares/schedules/daily/TSA-DUK",
+		"https://www.bcferries.com/routes-fares/schedules/daily/TSA-SWB",
+		"https://www.bcferries.com/routes-fares/schedules/daily/HSB-LNG",
+		"https://www.bcferries.com/routes-fares/schedules/daily/TSA-POB",
+		"https://www.bcferries.com/routes-fares/schedules/daily/TSA-PLH",
+		"https://www.bcferries.com/routes-fares/schedules/daily/TSA-PVB",
+		"https://www.bcferries.com/routes-fares/schedules/daily/TSA-PSB",
+		"https://www.bcferries.com/routes-fares/schedules/daily/TSA-PST",
+
+		// Vancouver Island
+		"https://www.bcferries.com/routes-fares/schedules/daily/SWB-TSA",
+		"https://www.bcferries.com/routes-fares/schedules/daily/SWB-FUL",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PPH-SHW",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PPH-POF",
+		"https://www.bcferries.com/routes-fares/schedules/daily/CFT-VES",
+		"https://www.bcferries.com/routes-fares/schedules/daily/NAN-HSB",
+		"https://www.bcferries.com/routes-fares/schedules/daily/MCN-ALR",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PPH-BEC",
+		"https://www.bcferries.com/routes-fares/schedules/daily/DUK-TSA",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PPH-PPR",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PPH-PBB",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PPH-KLE",
+		"https://www.bcferries.com/routes-fares/schedules/daily/BTW-MIL",
+		"https://www.bcferries.com/routes-fares/schedules/daily/NAH-GAB",
+		"https://www.bcferries.com/routes-fares/schedules/daily/CHM-THT",
+		"https://www.bcferries.com/routes-fares/schedules/daily/CHM-PEN",
+		"https://www.bcferries.com/routes-fares/schedules/daily/CAM-QDR",
+		"https://www.bcferries.com/routes-fares/schedules/daily/CMX-PWR",
+		"https://www.bcferries.com/routes-fares/schedules/daily/BKY-DNM",
+		"https://www.bcferries.com/routes-fares/schedules/daily/MCN-SOI",
+		"https://www.bcferries.com/routes-fares/schedules/daily/MIL-BTW",
+
+		// Sunshine Coast
+		"https://www.bcferries.com/routes-fares/schedules/daily/ERL-SLT",
+		"https://www.bcferries.com/routes-fares/schedules/daily/SLT-ERL",
+		"https://www.bcferries.com/routes-fares/schedules/daily/LNG-HSB",
+		"https://www.bcferries.com/routes-fares/schedules/daily/TEX-PWR",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PWR-TEX",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PWR-CMX",
+
+		// Southern Gulf Islands
+		"https://www.bcferries.com/routes-fares/schedules/daily/GAB-NAH",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PSB-TSA",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PVB-TSA",
+		"https://www.bcferries.com/routes-fares/schedules/daily/POB-TSA",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PEN-CHM",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PEN-THT",
+		"https://www.bcferries.com/routes-fares/schedules/daily/FUL-SWB",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PLH-TSA",
+		"https://www.bcferries.com/routes-fares/schedules/daily/VES-CFT",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PST-TSA",
+		"https://www.bcferries.com/routes-fares/schedules/daily/THT-CHM",
+		"https://www.bcferries.com/routes-fares/schedules/daily/THT-PEN",
+
+		// Northern Guld Islands
+		"https://www.bcferries.com/routes-fares/schedules/daily/HRB-COR",
+		"https://www.bcferries.com/routes-fares/schedules/daily/ALR-MCN",
+		"https://www.bcferries.com/routes-fares/schedules/daily/ALR-SOI",
+		"https://www.bcferries.com/routes-fares/schedules/daily/SOI-MCN",
+		"https://www.bcferries.com/routes-fares/schedules/daily/DNM-BKY",
+		"https://www.bcferries.com/routes-fares/schedules/daily/COR-HRB",
+		"https://www.bcferries.com/routes-fares/schedules/daily/QDR-CAM",
+		"https://www.bcferries.com/routes-fares/schedules/daily/SOI-ALR",
+		"https://www.bcferries.com/routes-fares/schedules/daily/DNE-HRN",
+		"https://www.bcferries.com/routes-fares/schedules/daily/HRN-DNE",
+
+		// Central Coast
+		"https://www.bcferries.com/routes-fares/schedules/daily/PBB-SHW",
+		"https://www.bcferries.com/routes-fares/schedules/daily/SHW-PPH",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PBB-BEC",
+		"https://www.bcferries.com/routes-fares/schedules/daily/BEC-POF",
+		"https://www.bcferries.com/routes-fares/schedules/daily/BEC-PBB",
+		"https://www.bcferries.com/routes-fares/schedules/daily/POF-SHW",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PBB-PPR",
+		"https://www.bcferries.com/routes-fares/schedules/daily/SHW-POF",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PBB-PPH",
+		"https://www.bcferries.com/routes-fares/schedules/daily/POF-BEC",
+		"https://www.bcferries.com/routes-fares/schedules/daily/SHW-PBB",
+		"https://www.bcferries.com/routes-fares/schedules/daily/BEC-PPH",
+		"https://www.bcferries.com/routes-fares/schedules/daily/KLE-PPR",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PBB-POF",
+		"https://www.bcferries.com/routes-fares/schedules/daily/POF-PBB",
+		"https://www.bcferries.com/routes-fares/schedules/daily/BEC-SHW",
+		"https://www.bcferries.com/routes-fares/schedules/daily/SHW-BEC",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PBB-KLE",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PBB-KLE",
+		"https://www.bcferries.com/routes-fares/schedules/daily/POF-PPH",
+
+		// North Coast
+		"https://www.bcferries.com/routes-fares/schedules/daily/PPR-KLE",
+		"https://www.bcferries.com/routes-fares/schedules/daily/KLE-PPH",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PPR-PSK",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PPR-PPH",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PPR-PBB",
+		"https://www.bcferries.com/routes-fares/schedules/daily/KLE-PBB",
+
+		// Haida Gwaii
+		"https://www.bcferries.com/routes-fares/schedules/daily/ALF-PSK",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PSK-PPR",
+		"https://www.bcferries.com/routes-fares/schedules/daily/PSK-ALF",
+	}
+}
+*/
