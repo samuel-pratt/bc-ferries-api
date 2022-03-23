@@ -17,7 +17,7 @@ var sailings Response
 func UpdateSchedule() {
 	sailings = ScrapeCapacityRoutes()
 
-	fmt.Print("Updated sailings.json at: ")
+	fmt.Print("Updated sailing data at: ")
 	fmt.Println(time.Now())
 }
 
