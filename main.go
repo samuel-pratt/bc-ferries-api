@@ -83,7 +83,7 @@ func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 	}
 
 	destinationTerminals := [6][]string{
-		{"SWB", "SGU", "DUK"},
+		{"SWB", "SGI", "DUK"},
 		{"TSA", "FUL", "SGI"},
 		{"NAN", "LNG", "BOW"},
 		{"TSA"},
