@@ -23,7 +23,7 @@ type Route struct {
 type Sailing struct {
 	Time         string `json:"time"`
 	Fill         int    `json:"fill"`
-	CarFill      int    `json:"CarFill"`
+	CarFill      int    `json:"carFill"`
 	OversizeFill int    `json:"oversizeFill"`
 	VesselName   string `json:"vesselName"`
 	VesselStatus string `json:"vesselStatus"`
