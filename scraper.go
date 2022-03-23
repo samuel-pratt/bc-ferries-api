@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -67,7 +66,7 @@ func ScrapeCapacityRoutes() Response {
 	}
 
 	destinationTerminals := [6][]string{
-		{"SWB", "SGU", "DUK"},
+		{"SWB", "SGI", "DUK"},
 		{"TSA", "FUL", "SGI"},
 		{"NAN", "LNG", "BOW"},
 		{"TSA"},
@@ -112,8 +111,10 @@ func ScrapeCapacityRoutes() Response {
 				}
 
 				sailingIndex := 0
+
 				// Get every row of table
 				table.Find("tr").Each(func(indextr int, row *goquery.Selection) {
+
 					if ContainsSailingData(row.Text()) {
 						// Sailing duration
 						if strings.Contains(row.Text(), "Sailing duration:") {
@@ -124,6 +125,7 @@ func ScrapeCapacityRoutes() Response {
 							if sailingIndex%2 == 0 {
 								// Time and fill
 								row.Find("td").Each(func(indextd int, tableData *goquery.Selection) {
+
 									if indextd == 0 {
 										// Time
 										time := strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(tableData.Text(), "(Tomorrow)", ""), " ", ""))
@@ -145,9 +147,6 @@ func ScrapeCapacityRoutes() Response {
 								})
 							} else {
 								// Vessel name, car fill, oversize fill
-								// vessel name 		.sailing-ferry-name
-								// car fill			.progress-bar index 0
-								// oversize fill	.progress-bar index 1
 
 								row.Find(".sailing-ferry-name").Each(func(indexname int, tableData *goquery.Selection) {
 									sailing.VesselName = strings.TrimSpace(tableData.Text())
@@ -214,8 +213,6 @@ func ScrapeCapacityRoutes() Response {
 		Schedule:  schedule,
 		ScrapedAt: currentTime,
 	}
-
-	fmt.Println(response)
 
 	return response
 }
