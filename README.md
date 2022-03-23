@@ -1,6 +1,6 @@
-## BC Ferries API - [bcferriesapi.ca](https://bcferriesapi.ca)
+## 🛳 BC Ferries API - [bcferriesapi.ca](https://bcferriesapi.ca)
 
-🛳 The only public API for retrieving current data on BC Ferries sailings.
+The only public API for retrieving current data on BC Ferries sailings.
 
 ## How It's Made
 
