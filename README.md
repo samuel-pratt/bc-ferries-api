@@ -1,6 +1,6 @@
-## BC Ferries API - [bcferriesapi.ca](https://bcferriesapi.ca)
+## 🛳 BC Ferries API - [bcferriesapi.ca](https://bcferriesapi.ca)
 
-🛳 The only public API for retrieving current data on BC Ferries sailings.
+The only public API for retrieving current data on BC Ferries sailings.
 
 ## How It's Made
 
@@ -9,6 +9,20 @@ BC Ferries API is a Go api connected to a web scraper. The scraper is made with 
 The frontend is made with HTML, Bootstrap, and Javascript. When the user hits the request button, it runs a small script that calls the api with the user's request, and displays the info on the page.
 
 ## API Reference
+
+This API uses the route codes used by BC Ferries, they are:
+
+```
+"TSA" -> Tsawwassen
+"SWB" -> Swartz Bay
+"SGI" -> Southern Gulf Islands
+"DUK" -> Duke Point (Nanaimo)
+"FUL" -> Fulford Harbour (Salt Spring Island)
+"HSB" -> Horseshoe Bay
+"NAN" -> Departure Bay (Nanaimo)
+"LNG" -> Langford
+"BOW" -> Bowen Island
+```
 
 The api runs on the format:
 
@@ -25,12 +39,12 @@ Options for each are as follows:
 ### departure-terminal
 
 ```
-"tsawwassen"
-"swartz-bay"
-"nanaimo-(duke-pt)"
-"nanaimo-(dep.bay)"
-"horseshoe-bay"
-"langdale"
+"TSA"
+"SWB"
+"HSB"
+"DUK"
+"LNG"
+"NAN"
 ```
 
 ### destination-terminal
@@ -38,27 +52,32 @@ Options for each are as follows:
 Note: destination terminal must correspond with departure terminal, for example you can't put tsawwassen to langdale, it will return an error.
 
 ```
-"tsawwassen": [
-    "swartz-bay"
-    "southern-gulf-islands"
-    "duke-point"
+"TSA": [
+    "SWB"
+    "SGI"
+    "DUK"
 ]
-"swartz-bay": [
-    "tsawwassen"
-    "fulford-harbour"
+"SWB": [
+    "TSA"
+    "FUL"
+    "SGI"
 ]
-"nanaimo-(duke-pt)": [
-    "tsawwassen"
+"HSB": [
+    "NAN"
+    "LNG"
+    "BOW"
 ]
-"nanaimo-(dep.bay)": [
-    "horseshoe-bay"
+"DUK": [
+    "TSA"
 ]
-"horseshoe-bay": [
-    "departure-bay"
-    "langdale"
-    "snug-cove-(bowen-is.)"
+"LNG": [
+    "HSB"
 ]
-"langdale": [
-    "horseshoe-bay"
+"NAN": [
+    "HSB"
 ]
 ```
+
+## Sample response
+
+A sample response from `https://www.bcferriesapi.ca/api/` can be found in `sample_response.json`.

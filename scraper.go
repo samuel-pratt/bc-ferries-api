@@ -1,9 +1,9 @@
 package main
 
-// Import OS and fmt packages
 import (
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -11,116 +11,197 @@ import (
 )
 
 type Response struct {
-	Schedule  map[string]map[string][]map[string]string `json:"schedule"`
-	ScrapedAt time.Time                                 `json:"scrapedAt"`
+	Schedule  map[string]map[string]Route `json:"schedule"`
+	ScrapedAt time.Time                   `json:"scrapedAt"`
 }
 
-func Scraper() Response {
-	// Links to individual schedule pages
-	routeLinks := [12]string{
-		"https://www.bcferries.com/current-conditions/vancouver-tsawwassen-victoria-swartz-bay/TSA-SWB",
-		"https://www.bcferries.com/current-conditions/vancouver-tsawwassen-southern-gulf-islands/TSA-SGI",
-		"https://www.bcferries.com/current-conditions/vancouver-tsawwassen-nanaimo-duke-point/TSA-DUK",
+type Route struct {
+	SailingDuration string    `json:"sailingDuration"`
+	Sailings        []Sailing `json:"sailings"`
+}
 
-		"https://www.bcferries.com/current-conditions/victoria-swartz-bay-vancouver-tsawwassen/SWB-TSA",
-		"https://www.bcferries.com/current-conditions/victoria-swartz-bay-salt-spring-island-fulford-harbour/SWB-FUL",
-		"https://www.bcferries.com/current-conditions/victoria-swartz-bay-southern-gulf-islands/SWB-SGI",
+type Sailing struct {
+	Time         string `json:"time"`
+	Fill         int    `json:"fill"`
+	CarFill      int    `json:"CarFill"`
+	OversizeFill int    `json:"oversizeFill"`
+	VesselName   string `json:"vesselName"`
+	VesselStatus string `json:"vesselStatus"`
+}
 
-		"https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-nanaimo-departure-bay/HSB-NAN",
-		"https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-sunshine-coast-langdale/HSB-LNG",
-		"https://www.bcferries.com/current-conditions/vancouver-horseshoe-bay-bowen-island-snug-cove/HSB-BOW",
+func MakeCurrentConditionsLink(departure, destination string) string {
+	return "https://www.bcferries.com/current-conditions/" + departure + "-" + destination
+}
 
-		"https://www.bcferries.com/current-conditions/nanaimo-duke-point-vancouver-tsawwassen/DUK-TSA",
-
-		"https://www.bcferries.com/current-conditions/sunshine-coast-langdale-vancouver-horseshoe-bay/LNG-HSB",
-
-		"https://www.bcferries.com/current-conditions/nanaimo-departure-bay-vancouver-horseshoe-bay/NAN-HSB",
+/*
+ *	ContainsSailingData()
+ *
+ *	Helper function to determine if a string should be read or skipped.
+ * 	Works by checking if string contains various sets of strings that denote no useful data here.
+ */
+func ContainsSailingData(stringToCheck string) bool {
+	if strings.Contains(stringToCheck, "Departures") && strings.Contains(stringToCheck, "Status") && strings.Contains(stringToCheck, "Details") {
+		return false
 	}
 
-	// Tracks the correlating indexes between routeLinks and departureTerminals
-	routeIndex := [12]int{0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 4, 5}
+	if strings.Contains(stringToCheck, "Arrived:") || strings.Contains(stringToCheck, "ETA:") {
+		return false
+	}
 
+	if strings.Contains(stringToCheck, "...") {
+		return false
+	}
+
+	return true
+}
+
+func ScrapeCapacityRoutes() Response {
 	departureTerminals := [6]string{
-		"tsawwassen",
-		"swartz-bay",
-		"horseshoe-bay",
-		"nanaimo-(duke-pt)",
-		"langdale",
-		"nanaimo-(dep-bay)",
+		"TSA",
+		"SWB",
+		"HSB",
+		"DUK",
+		"LNG",
+		"NAN",
 	}
-
-	// Tracks the correlating indexes between route links and destinationTerminals
-	destinationIndex := [12]int{0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 0, 0}
 
 	destinationTerminals := [6][]string{
-		{"swartz-bay", "southern-gulf-islands", "nanaimo-(duke-pt)"},
-		{"tsawwassen", "fulford-habrbour-(saltspring)", "southern-gulf-islands"},
-		{"nanaimo-(dep-bay)", "langdale", "snug-cove-(bowen)"},
-		{"tsawwassen"},
-		{"horseshoe-bay"},
-		{"horseshoe-bay"},
+		{"SWB", "SGI", "DUK"},
+		{"TSA", "FUL", "SGI"},
+		{"NAN", "LNG", "BOW"},
+		{"TSA"},
+		{"HSB"},
+		{"HSB"},
 	}
 
-	var schedule = make(map[string]map[string][]map[string]string)
+	var schedule = make(map[string]map[string]Route)
 
-	for i := 0; i < len(routeLinks); i++ {
-		// Make HTTP GET request
-		response, err := http.Get(routeLinks[i])
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer response.Body.Close()
+	for i := 0; i < len(departureTerminals); i++ {
+		schedule[departureTerminals[i]] = make(map[string]Route)
 
-		// Create a goquery document from the HTTP response
-		document, err := goquery.NewDocumentFromReader(response.Body)
-		if err != nil {
-			log.Fatal("Error loading HTTP response body. ", err)
-		}
-
-		// Array of times and capacities
-		var times []string
-
-		// Find all <p> tags and save them to array
-		document.Find("p").Each(func(index int, element *goquery.Selection) {
-			// Time and capacity data has an empty string as it's class
-			class, exists := element.Attr("class")
-			if exists && class == "" {
-				// Get text
-				text := element.Text()
-
-				// Remove trailing whitespace
-				text = strings.TrimSpace(text)
-
-				// Remove text after time
-				if len(text) > 15 {
-					text = text[:15]
-				}
-
-				text = strings.TrimSpace(text)
-
-				if text == "" {
-					text = "Cancelled"
-				}
-
-				// Save times
-				times = append(times, text)
+		for j := 0; j < len(destinationTerminals[i]); j++ {
+			// Make HTTP GET request
+			response, err := http.Get(MakeCurrentConditionsLink(departureTerminals[i], destinationTerminals[i][j]))
+			if err != nil {
+				log.Fatal(err)
 			}
-		})
+			defer response.Body.Close()
 
-		// Process array into schedule map
-		for j := 0; j < len(times); j += 2 {
-			sailing := map[string]string{}
-			sailing["time"] = times[j]
-			sailing["capacity"] = times[j+1]
-
-			departureTerminal := departureTerminals[routeIndex[i]]
-			destinationTerminal := destinationTerminals[routeIndex[i]][destinationIndex[i]]
-
-			if schedule[departureTerminal] == nil {
-				schedule[departureTerminal] = make(map[string][]map[string]string)
+			// Create a goquery document from the HTTP response
+			document, err := goquery.NewDocumentFromReader(response.Body)
+			if err != nil {
+				log.Fatal("Error loading HTTP response body. ", err)
 			}
 
-			schedule[departureTerminal][destinationTerminal] = append(schedule[departureTerminal][destinationTerminal], sailing)
+			route := Route{
+				SailingDuration: "",
+				Sailings:        []Sailing{},
+			}
+
+			// Get table of times and capacities
+			document.Find(".detail-departure-table").Each(func(index int, table *goquery.Selection) {
+
+				sailing := Sailing{
+					Time:         "",
+					Fill:         0,
+					CarFill:      0,
+					OversizeFill: 0,
+					VesselName:   "",
+					VesselStatus: "",
+				}
+
+				sailingIndex := 0
+
+				// Get every row of table
+				table.Find("tr").Each(func(indextr int, row *goquery.Selection) {
+
+					if ContainsSailingData(row.Text()) {
+						// Sailing duration
+						if strings.Contains(row.Text(), "Sailing duration:") {
+							row.Find("b").Each(func(indexb int, sailingTime *goquery.Selection) {
+								route.SailingDuration = strings.TrimSpace(sailingTime.Text())
+							})
+						} else {
+							if sailingIndex%2 == 0 {
+								// Time and fill
+								row.Find("td").Each(func(indextd int, tableData *goquery.Selection) {
+
+									if indextd == 0 {
+										// Time
+										time := strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(tableData.Text(), "(Tomorrow)", ""), " ", ""))
+
+										sailing.Time = time
+									} else if indextd == 1 {
+										// Fill
+										fill := strings.TrimSpace(tableData.Text())
+
+										if fill == "Full" {
+											sailing.Fill = 100
+										} else {
+											fill, err := strconv.Atoi(strings.Split(fill, "%")[0])
+											if err == nil {
+												sailing.Fill = 100 - fill
+											}
+										}
+									}
+								})
+							} else {
+								// Vessel name, car fill, oversize fill
+
+								row.Find(".sailing-ferry-name").Each(func(indexname int, tableData *goquery.Selection) {
+									sailing.VesselName = strings.TrimSpace(tableData.Text())
+								})
+
+								row.Find(".progress-bar").Each(func(indexprogressbar int, tableData *goquery.Selection) {
+									if indexprogressbar == 0 {
+										return
+									}
+
+									fillString := strings.TrimSpace(tableData.Text())
+									fill := 0
+
+									if fillString == "FULL" {
+										fill = 100
+									} else {
+										fillInt, err := strconv.Atoi(strings.Split(fillString, "%")[0])
+										if err == nil {
+											fill = 100 - fillInt
+										}
+									}
+
+									if indexprogressbar == 1 {
+										sailing.CarFill = fill
+									} else if indexprogressbar == 2 {
+										sailing.OversizeFill = fill
+									} else {
+										return
+									}
+
+								})
+
+								// Add sailing to route
+								route.Sailings = append(route.Sailings, sailing)
+
+								// Reset sailing to default
+								sailing = Sailing{
+									Time:         "",
+									Fill:         0,
+									CarFill:      0,
+									OversizeFill: 0,
+									VesselName:   "",
+									VesselStatus: "",
+								}
+							}
+							sailingIndex++
+						}
+
+					} else {
+						return
+					}
+				})
+			})
+
+			schedule[departureTerminals[i]][destinationTerminals[i][j]] = route
 		}
 	}
 

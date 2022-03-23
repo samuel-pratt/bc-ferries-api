@@ -7,3 +7,6 @@
 # Build
 bc-ferries-api
 sailings.json
+
+# vscode
+.vscode
