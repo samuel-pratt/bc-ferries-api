@@ -1,7 +1,7 @@
 package main
 
-// Import OS and fmt packages
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -12,35 +12,51 @@ import (
 )
 
 type Response struct {
-	Schedule  map[string]map[string][]map[string]string `json:"schedule"`
-	ScrapedAt time.Time                                 `json:"scrapedAt"`
+	Schedule  map[string]map[string]Route `json:"schedule"`
+	ScrapedAt time.Time                   `json:"scrapedAt"`
+}
+
+type Route struct {
+	SailingDuration string    `json:"sailingDuration"`
+	Sailings        []Sailing `json:"sailings"`
+}
+
+type Sailing struct {
+	Time         string `json:"time"`
+	Fill         int    `json:"fill"`
+	CarFill      int    `json:"CarFill"`
+	OversizeFill int    `json:"oversizeFill"`
+	VesselName   string `json:"vesselName"`
+	VesselStatus string `json:"vesselStatus"`
+}
+
+func MakeCurrentConditionsLink(departure, destination string) string {
+	return "https://www.bcferries.com/current-conditions/" + departure + "-" + destination
+}
+
+/*
+ *	ContainsSailingData()
+ *
+ *	Helper function to determine if a string should be read or skipped.
+ * 	Works by checking if string contains various sets of strings that denote no useful data here.
+ */
+func ContainsSailingData(stringToCheck string) bool {
+	if strings.Contains(stringToCheck, "Departures") && strings.Contains(stringToCheck, "Status") && strings.Contains(stringToCheck, "Details") {
+		return false
+	}
+
+	if strings.Contains(stringToCheck, "Arrived:") || strings.Contains(stringToCheck, "ETA:") {
+		return false
+	}
+
+	if strings.Contains(stringToCheck, "...") {
+		return false
+	}
+
+	return true
 }
 
 func ScrapeCapacityRoutes() Response {
-	// Links to individual schedule pages
-	capacityRouteLinks := [12]string{
-		"https://www.bcferries.com/current-conditions/TSA-SWB",
-		"https://www.bcferries.com/current-conditions/TSA-SGI",
-		"https://www.bcferries.com/current-conditions/TSA-DUK",
-
-		"https://www.bcferries.com/current-conditions/SWB-TSA",
-		"https://www.bcferries.com/current-conditions/SWB-FUL",
-		"https://www.bcferries.com/current-conditions/SWB-SGI",
-
-		"https://www.bcferries.com/current-conditions/HSB-NAN",
-		"https://www.bcferries.com/current-conditions/HSB-LNG",
-		"https://www.bcferries.com/current-conditions/HSB-BOW",
-
-		"https://www.bcferries.com/current-conditions/DUK-TSA",
-
-		"https://www.bcferries.com/current-conditions/LNG-HSB",
-
-		"https://www.bcferries.com/current-conditions/NAN-HSB",
-	}
-
-	// Tracks the correlating indexes between routeLinks and departureTerminals
-	routeIndex := [12]int{0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 4, 5}
-
 	departureTerminals := [6]string{
 		"TSA",
 		"SWB",
@@ -49,9 +65,6 @@ func ScrapeCapacityRoutes() Response {
 		"LNG",
 		"NAN",
 	}
-
-	// Tracks the correlating indexes between route links and destinationTerminals
-	destinationIndex := [12]int{0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 0, 0}
 
 	destinationTerminals := [6][]string{
 		{"SWB", "SGU", "DUK"},
@@ -62,73 +75,134 @@ func ScrapeCapacityRoutes() Response {
 		{"HSB"},
 	}
 
-	var schedule = make(map[string]map[string][]map[string]string)
+	var schedule = make(map[string]map[string]Route)
 
-	for i := 0; i < len(capacityRouteLinks); i++ {
-		// Make HTTP GET request
-		response, err := http.Get(capacityRouteLinks[i])
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer response.Body.Close()
+	for i := 0; i < len(departureTerminals); i++ {
+		schedule[departureTerminals[i]] = make(map[string]Route)
 
-		// Create a goquery document from the HTTP response
-		document, err := goquery.NewDocumentFromReader(response.Body)
-		if err != nil {
-			log.Fatal("Error loading HTTP response body. ", err)
-		}
+		for j := 0; j < len(destinationTerminals[i]); j++ {
+			// Make HTTP GET request
+			response, err := http.Get(MakeCurrentConditionsLink(departureTerminals[i], destinationTerminals[i][j]))
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer response.Body.Close()
 
-		// Array of times and capacities
-		var times []string
+			// Create a goquery document from the HTTP response
+			document, err := goquery.NewDocumentFromReader(response.Body)
+			if err != nil {
+				log.Fatal("Error loading HTTP response body. ", err)
+			}
 
-		// Find all <p> tags and save them to array
-		document.Find("p").Each(func(index int, element *goquery.Selection) {
-			// Time and capacity data has an empty string as it's class
-			class, exists := element.Attr("class")
-			if exists && class == "" {
-				// Get text
-				text := element.Text()
+			route := Route{
+				SailingDuration: "",
+				Sailings:        []Sailing{},
+			}
 
-				// Remove trailing whitespace
-				text = strings.TrimSpace(text)
+			// Get table of times and capacities
+			document.Find(".detail-departure-table").Each(func(index int, table *goquery.Selection) {
 
-				// Remove text after time
-				if len(text) > 15 {
-					text = text[:15]
+				sailing := Sailing{
+					Time:         "",
+					Fill:         0,
+					CarFill:      0,
+					OversizeFill: 0,
+					VesselName:   "",
+					VesselStatus: "",
 				}
 
-				text = strings.TrimSpace(text)
+				sailingIndex := 0
+				// Get every row of table
+				table.Find("tr").Each(func(indextr int, row *goquery.Selection) {
+					if ContainsSailingData(row.Text()) {
+						// Sailing duration
+						if strings.Contains(row.Text(), "Sailing duration:") {
+							row.Find("b").Each(func(indexb int, sailingTime *goquery.Selection) {
+								route.SailingDuration = strings.TrimSpace(sailingTime.Text())
+							})
+						} else {
+							if sailingIndex%2 == 0 {
+								// Time and fill
+								row.Find("td").Each(func(indextd int, tableData *goquery.Selection) {
+									if indextd == 0 {
+										// Time
+										time := strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(tableData.Text(), "(Tomorrow)", ""), " ", ""))
 
-				if text == "" {
-					text = "Cancelled"
-				}
+										sailing.Time = time
+									} else if indextd == 1 {
+										// Fill
+										fill := strings.TrimSpace(tableData.Text())
 
-				// Save times
-				times = append(times, text)
-			}
-		})
+										if fill == "Full" {
+											sailing.Fill = 100
+										} else {
+											fill, err := strconv.Atoi(strings.Split(fill, "%")[0])
+											if err == nil {
+												sailing.Fill = 100 - fill
+											}
+										}
+									}
+								})
+							} else {
+								// Vessel name, car fill, oversize fill
+								// vessel name 		.sailing-ferry-name
+								// car fill			.progress-bar index 0
+								// oversize fill	.progress-bar index 1
 
-		// Process array into schedule map
-		for j := 0; j < len(times); j += 2 {
-			sailing := map[string]string{}
-			sailing["time"] = times[j]
+								row.Find(".sailing-ferry-name").Each(func(indexname int, tableData *goquery.Selection) {
+									sailing.VesselName = strings.TrimSpace(tableData.Text())
+								})
 
-			capacity, err := strconv.Atoi(strings.Split(times[j+1], "%")[0])
+								row.Find(".progress-bar").Each(func(indexprogressbar int, tableData *goquery.Selection) {
+									if indexprogressbar == 0 {
+										return
+									}
 
-			if err == nil {
-				sailing["capacity"] = strconv.Itoa(100 - capacity)
-			} else {
-				sailing["capacity"] = times[j+1]
-			}
+									fillString := strings.TrimSpace(tableData.Text())
+									fill := 0
 
-			departureTerminal := departureTerminals[routeIndex[i]]
-			destinationTerminal := destinationTerminals[routeIndex[i]][destinationIndex[i]]
+									if fillString == "FULL" {
+										fill = 100
+									} else {
+										fillInt, err := strconv.Atoi(strings.Split(fillString, "%")[0])
+										if err == nil {
+											fill = 100 - fillInt
+										}
+									}
 
-			if schedule[departureTerminal] == nil {
-				schedule[departureTerminal] = make(map[string][]map[string]string)
-			}
+									if indexprogressbar == 1 {
+										sailing.CarFill = fill
+									} else if indexprogressbar == 2 {
+										sailing.OversizeFill = fill
+									} else {
+										return
+									}
 
-			schedule[departureTerminal][destinationTerminal] = append(schedule[departureTerminal][destinationTerminal], sailing)
+								})
+
+								// Add sailing to route
+								route.Sailings = append(route.Sailings, sailing)
+
+								// Reset sailing to default
+								sailing = Sailing{
+									Time:         "",
+									Fill:         0,
+									CarFill:      0,
+									OversizeFill: 0,
+									VesselName:   "",
+									VesselStatus: "",
+								}
+							}
+							sailingIndex++
+						}
+
+					} else {
+						return
+					}
+				})
+			})
+
+			schedule[departureTerminals[i]][destinationTerminals[i][j]] = route
 		}
 	}
 
@@ -141,116 +215,7 @@ func ScrapeCapacityRoutes() Response {
 		ScrapedAt: currentTime,
 	}
 
+	fmt.Println(response)
+
 	return response
 }
-
-/*
-func ScrapeNonCapacityRoutes(link string) {
-	nonCapacityRouteLinks := []string{
-		// Metro Vancouver
-		"https://www.bcferries.com/routes-fares/schedules/daily/HSB-NAN",
-		"https://www.bcferries.com/routes-fares/schedules/daily/BOW-HSB",
-		"https://www.bcferries.com/routes-fares/schedules/daily/HSB-BOW",
-		"https://www.bcferries.com/routes-fares/schedules/daily/TSA-DUK",
-		"https://www.bcferries.com/routes-fares/schedules/daily/TSA-SWB",
-		"https://www.bcferries.com/routes-fares/schedules/daily/HSB-LNG",
-		"https://www.bcferries.com/routes-fares/schedules/daily/TSA-POB",
-		"https://www.bcferries.com/routes-fares/schedules/daily/TSA-PLH",
-		"https://www.bcferries.com/routes-fares/schedules/daily/TSA-PVB",
-		"https://www.bcferries.com/routes-fares/schedules/daily/TSA-PSB",
-		"https://www.bcferries.com/routes-fares/schedules/daily/TSA-PST",
-
-		// Vancouver Island
-		"https://www.bcferries.com/routes-fares/schedules/daily/SWB-TSA",
-		"https://www.bcferries.com/routes-fares/schedules/daily/SWB-FUL",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PPH-SHW",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PPH-POF",
-		"https://www.bcferries.com/routes-fares/schedules/daily/CFT-VES",
-		"https://www.bcferries.com/routes-fares/schedules/daily/NAN-HSB",
-		"https://www.bcferries.com/routes-fares/schedules/daily/MCN-ALR",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PPH-BEC",
-		"https://www.bcferries.com/routes-fares/schedules/daily/DUK-TSA",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PPH-PPR",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PPH-PBB",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PPH-KLE",
-		"https://www.bcferries.com/routes-fares/schedules/daily/BTW-MIL",
-		"https://www.bcferries.com/routes-fares/schedules/daily/NAH-GAB",
-		"https://www.bcferries.com/routes-fares/schedules/daily/CHM-THT",
-		"https://www.bcferries.com/routes-fares/schedules/daily/CHM-PEN",
-		"https://www.bcferries.com/routes-fares/schedules/daily/CAM-QDR",
-		"https://www.bcferries.com/routes-fares/schedules/daily/CMX-PWR",
-		"https://www.bcferries.com/routes-fares/schedules/daily/BKY-DNM",
-		"https://www.bcferries.com/routes-fares/schedules/daily/MCN-SOI",
-		"https://www.bcferries.com/routes-fares/schedules/daily/MIL-BTW",
-
-		// Sunshine Coast
-		"https://www.bcferries.com/routes-fares/schedules/daily/ERL-SLT",
-		"https://www.bcferries.com/routes-fares/schedules/daily/SLT-ERL",
-		"https://www.bcferries.com/routes-fares/schedules/daily/LNG-HSB",
-		"https://www.bcferries.com/routes-fares/schedules/daily/TEX-PWR",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PWR-TEX",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PWR-CMX",
-
-		// Southern Gulf Islands
-		"https://www.bcferries.com/routes-fares/schedules/daily/GAB-NAH",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PSB-TSA",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PVB-TSA",
-		"https://www.bcferries.com/routes-fares/schedules/daily/POB-TSA",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PEN-CHM",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PEN-THT",
-		"https://www.bcferries.com/routes-fares/schedules/daily/FUL-SWB",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PLH-TSA",
-		"https://www.bcferries.com/routes-fares/schedules/daily/VES-CFT",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PST-TSA",
-		"https://www.bcferries.com/routes-fares/schedules/daily/THT-CHM",
-		"https://www.bcferries.com/routes-fares/schedules/daily/THT-PEN",
-
-		// Northern Guld Islands
-		"https://www.bcferries.com/routes-fares/schedules/daily/HRB-COR",
-		"https://www.bcferries.com/routes-fares/schedules/daily/ALR-MCN",
-		"https://www.bcferries.com/routes-fares/schedules/daily/ALR-SOI",
-		"https://www.bcferries.com/routes-fares/schedules/daily/SOI-MCN",
-		"https://www.bcferries.com/routes-fares/schedules/daily/DNM-BKY",
-		"https://www.bcferries.com/routes-fares/schedules/daily/COR-HRB",
-		"https://www.bcferries.com/routes-fares/schedules/daily/QDR-CAM",
-		"https://www.bcferries.com/routes-fares/schedules/daily/SOI-ALR",
-		"https://www.bcferries.com/routes-fares/schedules/daily/DNE-HRN",
-		"https://www.bcferries.com/routes-fares/schedules/daily/HRN-DNE",
-
-		// Central Coast
-		"https://www.bcferries.com/routes-fares/schedules/daily/PBB-SHW",
-		"https://www.bcferries.com/routes-fares/schedules/daily/SHW-PPH",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PBB-BEC",
-		"https://www.bcferries.com/routes-fares/schedules/daily/BEC-POF",
-		"https://www.bcferries.com/routes-fares/schedules/daily/BEC-PBB",
-		"https://www.bcferries.com/routes-fares/schedules/daily/POF-SHW",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PBB-PPR",
-		"https://www.bcferries.com/routes-fares/schedules/daily/SHW-POF",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PBB-PPH",
-		"https://www.bcferries.com/routes-fares/schedules/daily/POF-BEC",
-		"https://www.bcferries.com/routes-fares/schedules/daily/SHW-PBB",
-		"https://www.bcferries.com/routes-fares/schedules/daily/BEC-PPH",
-		"https://www.bcferries.com/routes-fares/schedules/daily/KLE-PPR",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PBB-POF",
-		"https://www.bcferries.com/routes-fares/schedules/daily/POF-PBB",
-		"https://www.bcferries.com/routes-fares/schedules/daily/BEC-SHW",
-		"https://www.bcferries.com/routes-fares/schedules/daily/SHW-BEC",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PBB-KLE",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PBB-KLE",
-		"https://www.bcferries.com/routes-fares/schedules/daily/POF-PPH",
-
-		// North Coast
-		"https://www.bcferries.com/routes-fares/schedules/daily/PPR-KLE",
-		"https://www.bcferries.com/routes-fares/schedules/daily/KLE-PPH",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PPR-PSK",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PPR-PPH",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PPR-PBB",
-		"https://www.bcferries.com/routes-fares/schedules/daily/KLE-PBB",
-
-		// Haida Gwaii
-		"https://www.bcferries.com/routes-fares/schedules/daily/ALF-PSK",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PSK-PPR",
-		"https://www.bcferries.com/routes-fares/schedules/daily/PSK-ALF",
-	}
-}
-*/
