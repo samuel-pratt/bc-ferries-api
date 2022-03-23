@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -11,36 +10,25 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/robfig/cron"
-	"github.com/tidwall/gjson"
 )
 
+var sailings Response
+
 func UpdateSchedule() {
-	response := ScrapeCapacityRoutes()
-	jsonString, _ := json.Marshal(response)
-	err := ioutil.WriteFile("sailings.json", []byte(jsonString), 0644)
-	if err != nil {
-		fmt.Println(err)
-	}
+	sailings = ScrapeCapacityRoutes()
+
 	fmt.Print("Updated sailings.json at: ")
 	fmt.Println(time.Now())
 }
 
 func GetAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	data, err := ioutil.ReadFile("sailings.json")
-	if err != nil {
-		fmt.Println(err)
-	}
+	jsonString, _ := json.Marshal(sailings)
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
+	w.Write(jsonString)
 }
 
 func GetDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	data, err := ioutil.ReadFile("sailings.json")
-	if err != nil {
-		fmt.Println(err)
-	}
-
 	departureTerminals := [6]string{
 		"TSA",
 		"SWB",
@@ -56,10 +44,12 @@ func GetDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.
 	// Find if departureTerminal is in departureTerminals
 	for i := 0; i < len(departureTerminals); i++ {
 		if strings.EqualFold(departureTerminal, departureTerminals[i]) {
-			schedule := gjson.Get(string(data), "schedule."+strings.ToUpper(departureTerminal))
+			schedule := sailings.Schedule[departureTerminal]
+
+			jsonString, _ := json.Marshal(schedule)
 
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(schedule.String()))
+			w.Write(jsonString)
 			return
 		}
 	}
@@ -68,11 +58,6 @@ func GetDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.
 }
 
 func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	data, err := ioutil.ReadFile("sailings.json")
-	if err != nil {
-		fmt.Println(err)
-	}
-
 	departureTerminals := [6]string{
 		"TSA",
 		"SWB",
@@ -100,10 +85,12 @@ func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 		if strings.EqualFold(departureTerminal, departureTerminals[i]) {
 			for j := 0; j < len(destinationTerminals[i]); j++ {
 				if strings.EqualFold(destinationTerminal, destinationTerminals[i][j]) {
-					schedule := gjson.Get(string(data), "schedule."+strings.ToUpper(departureTerminal)+"."+strings.ToUpper(destinationTerminal))
+					schedule := sailings.Schedule[departureTerminal][destinationTerminal]
+
+					jsonString, _ := json.Marshal(schedule)
 
 					w.Header().Set("Content-Type", "application/json")
-					w.Write([]byte(schedule.String()))
+					w.Write(jsonString)
 					return
 				}
 			}
