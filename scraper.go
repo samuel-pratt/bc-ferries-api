@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -136,7 +135,6 @@ func ScrapeCapacityRoutes() Response {
 
 										time = strings.TrimSpace(strings.ReplaceAll(time, " ", ""))
 
-										fmt.Println(time)
 										sailing.Time = time
 									} else if indextd == 1 {
 										// Fill
