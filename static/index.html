@@ -1,93 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
 
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>
-    BC Ferries API
-  </title>
+    <title>BC Ferries API</title>
 
-  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
-  <link rel="shortcut icon" href="/static/favicon.ico">
+    <!-- Bootstrap core CSS -->
+    <link href="./css/bootstrap.min.css" rel="stylesheet">
 
-  <script src="//code.jquery.com/jquery-2.1.0.min.js"></script>
-  <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
-</head>
+    <!-- Custom styles for this template -->
+    <link href="./css/cover.css" rel="stylesheet">
+  </head>
 
-<body>
-  <div class="container-fluid">
-    <div class="row center yellow ">
-      <div class="jumbotron" style="text-align: center;">
-        <h1>BC Ferries API</h1>
-        <p class="lead">The only public BC ferries API</p>
-        <p class="lead"><a href="https://github.com/samuel-pratt/bc-ferries-api/">GitHub</a></p>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col-sm-2 col-lg-2 col-md-2"></div>
-      <div class="col-lg-8 col-md-8 col-sm-8">
-        <h1 class="center">
-          Try it now!
-        </h1>
-        <div class="input-group">
-          <span class="input-group-addon">https://www.bcferriesapi.ca/api/</span>
-          <input id="interactive" type="text" class="form-control" placeholder="TSA/SWB">
-          <span class="input-group-btn"><button onClick="interactive_call();return false;"
-              class="btn btn-primary">request</button></span>
+  <body>
+
+    <div class="site-wrapper">
+
+      <div class="site-wrapper-inner">
+
+        <div class="cover-container">
+
+          <div class="masthead clearfix">
+            <div class="inner">
+              <h3 class="masthead-brand">BC Ferries API</h3>
+              <ul class="nav masthead-nav">
+                <li class="active"><a href="#">Home</a></li>
+                <li><a href="https://github.com/samuel-pratt/bc-ferries-api/blob/master/README.md">Docs</a></li>
+                <li><a href="https://github.com/samuel-pratt/bc-ferries-api">Code</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="inner cover">
+            <h1 class="cover-heading" style="color:#33CCFF"><b>BC Ferries API</b></h1>
+            <p class="lead">The only public API for retrieving current data on BC Ferries sailings.</p><br>
+            <p class="lead" style="font-size:18px">To get started, make a GET request to one of the following:</p>
+            <p class="lead" align="left" style="background-color:#51514B;font-family:monospace;font-size:16px">
+              https://bcferriesapi.ca/api/<br>
+              https://bcferriesapi.ca/api/TSA/<br>
+              https://bcferriesapi.ca/api/TSA/SWB/<br>
+            </p>
+            <p class="lead">
+              <a href="https://github.com/samuel-pratt/bc-ferries-api/blob/master/README.md" class="btn btn-lg btn-default">Learn more</a>
+            </p>
+          </div>
+
+          <div class="mastfoot">
+            <div class="inner">
+              <p>Made by <a href="https://github.com/samuel-pratt/">Sam Pratt</a>
+              <p>Download the <a href="https://apps.apple.com/ca/app/id1615899209">BC Ferry Times App</a></p>
+            </div>
+          </div>
         </div>
-        <small>Need a hint? try <a href="#" onClick="update('TSA/');return false;"><i>TSA/</i></a> or <a
-            href="#"
-            onClick="update('NAN/HSB/');return false;"><i>NAN/HSB/</i></a></small>
-        <p class="lead pad_top">Result:</p>
-        <div class="well">
-          <pre id="interactive_output" class="pre-scrollable">Send a request to see the response here!</pre>
-        </div>
-      </div>
-      <div class="col-sm-2 col-lg-2 col-md-2">
       </div>
     </div>
-    <div class="row pad_bot">
-      <div class="col-sm-3 col-lg-3 col-md-3">
-      </div>
-      <div class="col-sm-3 col-lg-3 col-md-3">
-        <h4 class="center">How can I use it?</h4>
-        <p>All the data is accessible through our HTTP web API. Consult the <a
-            href="https://github.com/samuel-pratt/bc-ferries-api/blob/master/README.md">ReadMe</a> if you'd like to get
-          started.</p>
-      </div>
-      <div class="col-sm-3 col-lg-3 col-md-3">
-        <h4 class="center">Is there an issue?</h4>
-        <p>If something isn't working, submit an issue <a
-            href="https://github.com/samuel-pratt/bc-ferries-api/issues/new">on GitHub</a></p>
-      </div>
-      <div class="col-sm-3 col-lg-3 col-md-3">
-      </div>
-    </div>
-    <script>
-      function update(call) {
-        jQuery('#interactive').val(call);
-        interactive_call();
-      }
-
-      function interactive_call() {
-        var content = jQuery('#interactive').val()
-        var call_url = 'api/' + content;
-        jQuery.ajax({
-          dataType: 'json',
-          url: call_url,
-          context: document.body
-        }).complete(function (data) {
-          if (data['status'] == 200) {
-            var d = jQuery.parseJSON(data['responseText']);
-            jQuery('#interactive_output').text(JSON.stringify(d, null, '\t'));
-          } else if (data['status'] == 404) {
-            jQuery('#interactive_output').text(data['status'] + ' ' + data['statusText']);
-          }
-        });
-      }
-    </script>
-  </div>
-</body>
-
+  </body>
 </html>
