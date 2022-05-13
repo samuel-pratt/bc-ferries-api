@@ -48,6 +48,10 @@ func ContainsSailingData(stringToCheck string) bool {
 		return false
 	}
 
+	if strings.Contains(stringToCheck, "Cancelled") {
+		return false
+	}
+
 	if strings.Contains(stringToCheck, "...") {
 		return false
 	}
