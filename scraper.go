@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -118,7 +119,6 @@ func ScrapeCapacityRoutes() Response {
 
 				// Get every row of table
 				table.Find("tr").Each(func(indextr int, row *goquery.Selection) {
-
 					if ContainsSailingData(row.Text()) {
 						// Sailing duration
 						if strings.Contains(row.Text(), "Sailing duration:") {
@@ -126,13 +126,15 @@ func ScrapeCapacityRoutes() Response {
 								route.SailingDuration = strings.TrimSpace(sailingTime.Text())
 							})
 						} else {
-							if sailingIndex%2 == 0 {
+							if strings.Contains(row.Text(), " AM") || strings.Contains(row.Text(), " PM") {
 								// Time and fill
 								row.Find("td").Each(func(indextd int, tableData *goquery.Selection) {
 
 									if indextd == 0 {
 										// Time
 										time := strings.TrimSpace(tableData.Text())
+										fmt.Println(time)
+										fmt.Println(destinationTerminals[i][j])
 										if len(time) > 7 {
 											time = time[0:8]
 										}
@@ -189,7 +191,9 @@ func ScrapeCapacityRoutes() Response {
 								})
 
 								// Add sailing to route
-								route.Sailings = append(route.Sailings, sailing)
+								if sailing.Time != "" {
+									route.Sailings = append(route.Sailings, sailing)
+								}
 
 								// Reset sailing to default
 								sailing = Sailing{
