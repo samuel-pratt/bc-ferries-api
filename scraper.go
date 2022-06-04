@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -133,8 +132,6 @@ func ScrapeCapacityRoutes() Response {
 									if indextd == 0 {
 										// Time
 										time := strings.TrimSpace(tableData.Text())
-										fmt.Println(time)
-										fmt.Println(destinationTerminals[i][j])
 										if len(time) > 7 {
 											time = time[0:8]
 										}
