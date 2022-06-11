@@ -1,6 +1,6 @@
 ## 🛳 BC Ferries API - [bcferriesapi.ca](https://bcferriesapi.ca)
 
-The only public API for retrieving current data on BC Ferries sailings.
+The only public API for retrieving current data on BC Ferries sailings. Used in my app [BC Ferry Times](https://apps.apple.com/ca/app/id1615899209), an iOS app to get the latest ferry schedule and sailing capacities.
 
 ## How It's Made
 
@@ -79,3 +79,9 @@ Note: destination terminal must correspond with departure terminal, for example 
 ## Sample response
 
 A sample response from `https://www.bcferriesapi.ca/api/` can be found in `sample_response.json`.
+
+## Used By
+
+Add your project here if it uses the BC Ferries API.
+
+- [BC Ferry Times](https://apps.apple.com/ca/app/id1615899209): An iOS app to get the latest ferry schedule and sailing capacities.
