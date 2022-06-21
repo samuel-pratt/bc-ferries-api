@@ -120,5 +120,9 @@ func main() {
 	router.NotFound = http.FileServer(http.Dir("./static"))
 
 	port := os.Getenv("PORT")
+	if port == "" {
+		port = "9000" // Default port if not specified
+	}
+
 	http.ListenAndServe(":"+port, router)
 }
