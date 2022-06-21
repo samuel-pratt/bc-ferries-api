@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -120,11 +121,9 @@ func main() {
 	router.NotFound = http.FileServer(http.Dir("./static"))
 
 	var port = os.Getenv("PORT")
-	fmt.Println(port)
-	// Set a default port if there is nothing in the environment
+
 	if port == "" {
-		port = "4747"
-		fmt.Println("INFO: No PORT environment variable detected, defaulting to " + port)
+		log.Fatal("$PORT must be set")
 	}
 
 	http.ListenAndServe(":"+port, router)
