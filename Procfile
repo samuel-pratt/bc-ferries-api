@@ -1,1 +1,1 @@
-web: bc-ferries-api
+web: ./bc-ferries-api
