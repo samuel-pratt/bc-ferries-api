@@ -119,9 +119,12 @@ func main() {
 	// Home page
 	router.NotFound = http.FileServer(http.Dir("./static"))
 
-	port := os.Getenv("PORT")
+	var port = os.Getenv("PORT")
+	fmt.Println(port)
+	// Set a default port if there is nothing in the environment
 	if port == "" {
-		port = "8080" // Default port if not specified
+		port = "4747"
+		fmt.Println("INFO: No PORT environment variable detected, defaulting to " + port)
 	}
 
 	http.ListenAndServe(":"+port, router)
