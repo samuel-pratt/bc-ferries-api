@@ -1,1 +1,1 @@
-worker: bin/bc-ferries-api
+web: bin/bc-ferries-api
