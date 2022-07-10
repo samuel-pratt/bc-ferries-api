@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/labstack/echo/v5"
+	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/apis"
+	"github.com/pocketbase/pocketbase/core"
 	"github.com/robfig/cron"
 )
 
@@ -110,21 +113,67 @@ func main() {
 	c.AddFunc("@every 1m", UpdateSchedule)
 	c.Start()
 
-	router := httprouter.New()
+	// router := httprouter.New()
 
-	// Root api call
-	router.GET("/api/", GetAll)
-	router.GET("/api/:departureTerminal/", GetDepartureTerminal)
-	router.GET("/api/:departureTerminal/:destinationTerminal/", GetDestinationTerminal)
+	// // Root api call
+	// router.GET("/api/", GetAll)
+	// router.GET("/api/:departureTerminal/", GetDepartureTerminal)
+	// router.GET("/api/:departureTerminal/:destinationTerminal/", GetDestinationTerminal)
 
-	// Home page
-	router.NotFound = http.FileServer(http.Dir("./static"))
+	// // Home page
+	// router.NotFound = http.FileServer(http.Dir("./static"))
 
-	var port = os.Getenv("PORT")
+	// var port = os.Getenv("PORT")
 
-	if port == "" {
-		log.Fatal("$PORT must be set")
+	// if port == "" {
+	// 	log.Fatal("$PORT must be set")
+	// }
+
+	// http.ListenAndServe(":"+port, router)
+
+	app := pocketbase.New()
+
+	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+		e.Router.AddRoute(echo.Route{
+			Method: http.MethodGet,
+			Path:   "/",
+			Handler: func(c echo.Context) error {
+
+				return c.String(200, "hello")
+			},
+			Middlewares: []echo.MiddlewareFunc{
+				apis.RequireGuestOnly(),
+			},
+		})
+
+		e.Router.AddRoute(echo.Route{
+			Method: http.MethodGet,
+			Path:   "/api",
+			Handler: func(c echo.Context) error {
+				jsonString, _ := json.Marshal(sailings)
+				return c.JSONBlob(200, jsonString)
+			},
+			Middlewares: []echo.MiddlewareFunc{
+				apis.RequireGuestOnly(),
+			},
+		})
+
+		e.Router.AddRoute(echo.Route{
+			Method: http.MethodGet,
+			Path:   "/healthcheck",
+			Handler: func(c echo.Context) error {
+				return c.String(200, "OK")
+			},
+			Middlewares: []echo.MiddlewareFunc{
+				apis.RequireGuestOnly(),
+			},
+		})
+
+		return nil
+	})
+
+	if err := app.Start(); err != nil {
+		fmt.Println("hello")
+		log.Fatal(err)
 	}
-
-	http.ListenAndServe(":"+port, router)
 }
