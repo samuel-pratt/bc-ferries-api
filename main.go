@@ -21,7 +21,17 @@ func UpdateSchedule() {
 	fmt.Println(time.Now())
 }
 
+func HealthCheck(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	jsonString, _ := json.Marshal("Server OK")
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonString)
+}
+
 func GetAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	fmt.Print("/api/ call at: ")
+	fmt.Println(time.Now())
+
 	jsonString, _ := json.Marshal(sailings)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -44,6 +54,9 @@ func GetDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.
 	// Find if departureTerminal is in departureTerminals
 	for i := 0; i < len(departureTerminals); i++ {
 		if strings.EqualFold(departureTerminal, departureTerminals[i]) {
+			fmt.Print("/api/" + departureTerminal + "/ call at: ")
+			fmt.Println(time.Now())
+
 			schedule := sailings.Schedule[departureTerminal]
 
 			jsonString, _ := json.Marshal(schedule)
@@ -85,6 +98,9 @@ func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 		if strings.EqualFold(departureTerminal, departureTerminals[i]) {
 			for j := 0; j < len(destinationTerminals[i]); j++ {
 				if strings.EqualFold(destinationTerminal, destinationTerminals[i][j]) {
+					fmt.Print("/api/" + departureTerminal + "/" + destinationTerminal + "/ call at: ")
+					fmt.Println(time.Now())
+
 					schedule := sailings.Schedule[departureTerminal][destinationTerminal]
 
 					jsonString, _ := json.Marshal(schedule)
@@ -111,7 +127,7 @@ func main() {
 
 	router := httprouter.New()
 
-	// Root api call
+	router.GET("/healthcheck/", HealthCheck)
 	router.GET("/api/", GetAll)
 	router.GET("/api/:departureTerminal/", GetDepartureTerminal)
 	router.GET("/api/:departureTerminal/:destinationTerminal/", GetDestinationTerminal)
