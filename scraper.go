@@ -151,7 +151,7 @@ func ScrapeCapacityRoutes() Response {
 					} else {
 						fill, err := strconv.Atoi(strings.Split(fill, "%")[0])
 						if err == nil {
-							sailing.Fill = fill
+							sailing.Fill = 100 - fill
 						}
 					}
 
@@ -165,7 +165,7 @@ func ScrapeCapacityRoutes() Response {
 						} else {
 							fill, err := strconv.Atoi(strings.Split(fill, "%")[0])
 							if err == nil {
-								fillResult = fill
+								fillResult = 100 - fill
 							}
 						}
 
