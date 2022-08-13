@@ -3,14 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/getsentry/sentry-go"
-	"github.com/joho/godotenv"
 	"github.com/julienschmidt/httprouter"
 	"github.com/robfig/cron"
 )
@@ -32,8 +29,6 @@ func HealthCheck(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func GetAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	sentry.CaptureMessage("/api/")
-
 	fmt.Print("/api/ call at: ")
 	fmt.Println(time.Now())
 
@@ -59,8 +54,6 @@ func GetDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.
 	// Find if departureTerminal is in departureTerminals
 	for i := 0; i < len(departureTerminals); i++ {
 		if strings.EqualFold(departureTerminal, departureTerminals[i]) {
-			sentry.CaptureMessage("/api/" + departureTerminal + "/")
-
 			fmt.Print("/api/" + departureTerminal + "/ call at: ")
 			fmt.Println(time.Now())
 
@@ -105,8 +98,6 @@ func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 		if strings.EqualFold(departureTerminal, departureTerminals[i]) {
 			for j := 0; j < len(destinationTerminals[i]); j++ {
 				if strings.EqualFold(destinationTerminal, destinationTerminals[i][j]) {
-					sentry.CaptureMessage("/api/" + departureTerminal + "/" + destinationTerminal + "/")
-
 					fmt.Print("/api/" + departureTerminal + "/" + destinationTerminal + "/ call at: ")
 					fmt.Println(time.Now())
 
@@ -126,27 +117,6 @@ func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 }
 
 func main() {
-	godotenv.Load()
-
-	dsn := os.Getenv("SENTRY_DSN")
-
-	fmt.Println(dsn)
-
-	err := sentry.Init(sentry.ClientOptions{
-		Dsn: dsn,
-
-		Debug: false,
-		// Set TracesSampleRate to 1.0 to capture 100%
-		// of transactions for performance monitoring.
-		// We recommend adjusting this value in production,
-		TracesSampleRate: 1.0,
-	})
-	if err != nil {
-		log.Fatalf("sentry.Init: %s", err)
-	}
-
-	defer sentry.Flush(2 * time.Second)
-
 	// Create new schedule at startup
 	UpdateSchedule()
 
