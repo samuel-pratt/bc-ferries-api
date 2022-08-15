@@ -13,9 +13,18 @@ import (
 )
 
 var sailings Response
+var isSiteDown bool
 
 func UpdateSchedule() {
 	sailings = ScrapeCapacityRoutes()
+
+	// No reason for checking these sailings specifically, just acts as a check for if the site is down
+	// When BC Ferries is down all sailigns will be empty arrays but it seems excessive to check every single one
+	if len(sailings.Schedule["TSA"]["SWB"].Sailings) == 0 && len(sailings.Schedule["SWB"]["TSA"].Sailings) == 0 && len(sailings.Schedule["HSB"]["NAN"].Sailings) == 0 {
+		isSiteDown = true
+	} else {
+		isSiteDown = false
+	}
 
 	fmt.Print("Updated sailing data at: ")
 	fmt.Println(time.Now())
@@ -29,6 +38,12 @@ func HealthCheck(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func GetAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	if isSiteDown == true {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(nil)
+		return
+	}
+
 	fmt.Print("/api/ call at: ")
 	fmt.Println(time.Now())
 
@@ -39,6 +54,12 @@ func GetAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func GetDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	if isSiteDown == true {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(nil)
+		return
+	}
+
 	departureTerminals := [6]string{
 		"TSA",
 		"SWB",
@@ -71,6 +92,12 @@ func GetDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.
 }
 
 func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	if isSiteDown == true {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(nil)
+		return
+	}
+
 	departureTerminals := [6]string{
 		"TSA",
 		"SWB",
