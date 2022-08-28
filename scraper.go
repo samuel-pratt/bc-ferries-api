@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -146,7 +147,8 @@ func ScrapeCapacityRoutes() Response {
 
 					// FILL
 					fill := strings.TrimSpace(sailingData.Find(".cc-percentage").First().Text())
-					if fill == "Full" || fill == "100%" {
+					fmt.Println(fill)
+					if fill == "Full" || fill == "100%" || strings.Contains(fill, "100") {
 						sailing.Fill = 100
 					} else {
 						fill, err := strconv.Atoi(strings.Split(fill, "%")[0])
