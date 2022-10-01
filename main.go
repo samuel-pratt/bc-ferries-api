@@ -30,14 +30,21 @@ func UpdateSchedule() {
 	fmt.Println(time.Now())
 }
 
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+}
+
 func HealthCheck(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	jsonString, _ := json.Marshal("Server OK")
 
+	enableCors(&w)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonString)
 }
 
 func GetAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	enableCors(&w)
+
 	if isSiteDown == true {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(nil)
@@ -54,6 +61,8 @@ func GetAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func GetDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	enableCors(&w)
+
 	if isSiteDown == true {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(nil)
@@ -92,6 +101,8 @@ func GetDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.
 }
 
 func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	enableCors(&w)
+
 	if isSiteDown == true {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(nil)
