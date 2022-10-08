@@ -85,3 +85,4 @@ A sample response from `https://www.bcferriesapi.ca/api/` can be found in `sampl
 Add your project here if it uses the BC Ferries API.
 
 - [BC Ferry Times](https://apps.apple.com/ca/app/id1615899209): An iOS app to get the latest ferry schedule and sailing capacities.
+- [MMM BC Ferries](https://github.com/stonecrown/MMM-BCFerries): A MagicMirror2 module that displays the current info for scheduled sailings of a specified BC Ferries route.
