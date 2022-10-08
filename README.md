@@ -86,3 +86,4 @@ Add your project here if it uses the BC Ferries API.
 
 - [BC Ferry Times](https://apps.apple.com/ca/app/id1615899209): An iOS app to get the latest ferry schedule and sailing capacities.
 - [MMM BC Ferries](https://github.com/stonecrown/MMM-BCFerries): A MagicMirror2 module that displays the current info for scheduled sailings of a specified BC Ferries route.
+- [Cascadia Crossing](https://apps.apple.com/app/1643019956): An iOS app to get the latest border crossing times, ferry schedules, and sailing capacitites.
