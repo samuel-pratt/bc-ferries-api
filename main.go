@@ -8,15 +8,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-co-op/gocron"
 	"github.com/julienschmidt/httprouter"
-	"github.com/robfig/cron"
 )
 
 var sailings Response
 var isSiteDown bool
 
-func UpdateSchedule() {
-	sailings = ScrapeCapacityRoutes()
+func UpdateSchedule(localMode bool) {
+	sailings = ScrapeCapacityRoutes(localMode)
 
 	// No reason for checking these sailings specifically, just acts as a check for if the site is down
 	// When BC Ferries is down all sailigns will be empty arrays but it seems excessive to check every single one
@@ -155,16 +155,20 @@ func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 }
 
 func main() {
-	// Create new schedule at startup
-	UpdateSchedule()
+	// Switch to true to use local html files
+	localMode := true
 
-	// Schedule update every hour
-	c := cron.New()
-	c.AddFunc("@every 1m", UpdateSchedule)
-	c.Start()
+	// Schedule update every minute
+	s := gocron.NewScheduler(time.UTC)
+	s.Every(1).Minute().Do(func() {
+		UpdateSchedule(localMode)
+	})
+	s.StartAsync()
 
+	// Create router
 	router := httprouter.New()
 
+	// Set up routes
 	router.GET("/healthcheck/", HealthCheck)
 	router.GET("/api/", GetAll)
 	router.GET("/api/:departureTerminal/", GetDepartureTerminal)

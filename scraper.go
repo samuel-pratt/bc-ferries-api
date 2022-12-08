@@ -1,8 +1,10 @@
 package main
 
 import (
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -65,7 +67,7 @@ func ContainsSailingData(stringToCheck string) bool {
 	return false
 }
 
-func ScrapeCapacityRoutes() Response {
+func ScrapeCapacityRoutes(localMode bool) Response {
 	departureTerminals := [6]string{
 		"TSA",
 		"SWB",
@@ -90,25 +92,38 @@ func ScrapeCapacityRoutes() Response {
 		schedule[departureTerminals[i]] = make(map[string]Route)
 
 		for j := 0; j < len(destinationTerminals[i]); j++ {
-			// Make HTTP GET request
-			response, err := http.Get(MakeCurrentConditionsLink(departureTerminals[i], destinationTerminals[i][j]))
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer response.Body.Close()
+			var document *goquery.Document
 
-			// For local testing, make sure to change "response.Body" to "response" below
-			// file, err := os.OpenFile("./sample-site.html", os.O_RDWR, 0644)
-			// if err != nil {
-			// 	log.Fatal("failed")
-			// }
+			if localMode == true {
+				file, err := os.OpenFile("./sample-site.html", os.O_RDWR, 0644)
+				if err != nil {
+					log.Fatal("Local file read failed")
+				}
 
-			// var response io.Reader = (file)
+				var response io.Reader = (file)
 
-			// Create a goquery document from the HTTP response
-			document, err := goquery.NewDocumentFromReader(response.Body)
-			if err != nil {
-				log.Fatal("Error loading HTTP response body. ", err)
+				// Create a goquery document from the HTTP response
+				document, err = goquery.NewDocumentFromReader(response)
+				if err != nil {
+					log.Fatal("Error loading HTTP response body. ", err)
+				}
+			} else {
+				// Make HTTP GET request
+				client := &http.Client{}
+				req, err := http.NewRequest("GET", MakeCurrentConditionsLink(departureTerminals[i], destinationTerminals[i][j]), nil)
+				req.Header.Add("User-Agent", "Mozilla")
+				response, err := client.Do(req)
+
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				defer response.Body.Close()
+
+				document, err = goquery.NewDocumentFromReader(response.Body)
+				if err != nil {
+					log.Fatal("Error loading HTTP response body. ", err)
+				}
 			}
 
 			route := Route{
