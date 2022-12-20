@@ -8,15 +8,30 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-co-op/gocron"
 	"github.com/julienschmidt/httprouter"
-	"github.com/robfig/cron"
 )
+
+type Response struct {
+	Schedule  map[string]map[string]Route `json:"schedule"`
+	ScrapedAt time.Time                   `json:"scrapedAt"`
+}
 
 var sailings Response
 var isSiteDown bool
 
-func UpdateSchedule() {
-	sailings = ScrapeCapacityRoutes()
+func UpdateSchedule(localMode bool) {
+	capacityRoutes := ScrapeRoutes(localMode)
+	// Add timestamp to data
+	currentTime := time.Now()
+
+	// Add schedule and timestamp to response object
+	response := Response{
+		Schedule:  capacityRoutes,
+		ScrapedAt: currentTime,
+	}
+
+	sailings = response
 
 	// No reason for checking these sailings specifically, just acts as a check for if the site is down
 	// When BC Ferries is down all sailigns will be empty arrays but it seems excessive to check every single one
@@ -69,14 +84,7 @@ func GetDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.
 		return
 	}
 
-	departureTerminals := [6]string{
-		"TSA",
-		"SWB",
-		"HSB",
-		"DUK",
-		"LNG",
-		"NAN",
-	}
+	departureTerminals := GetDepartureTerminals()
 
 	// Get url paramaters
 	departureTerminal := ps.ByName("departureTerminal")
@@ -109,23 +117,9 @@ func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 		return
 	}
 
-	departureTerminals := [6]string{
-		"TSA",
-		"SWB",
-		"HSB",
-		"DUK",
-		"LNG",
-		"NAN",
-	}
+	departureTerminals := GetDepartureTerminals()
 
-	destinationTerminals := [6][]string{
-		{"SWB", "SGI", "DUK"},
-		{"TSA", "FUL", "SGI"},
-		{"NAN", "LNG", "BOW"},
-		{"TSA"},
-		{"HSB"},
-		{"HSB"},
-	}
+	destinationTerminals := GetDestinationTerminals()
 
 	// Get url paramaters
 	departureTerminal := ps.ByName("departureTerminal")
@@ -155,16 +149,20 @@ func GetDestinationTerminal(w http.ResponseWriter, r *http.Request, ps httproute
 }
 
 func main() {
-	// Create new schedule at startup
-	UpdateSchedule()
+	// Switch to true to use local html files
+	localMode := false
 
-	// Schedule update every hour
-	c := cron.New()
-	c.AddFunc("@every 1m", UpdateSchedule)
-	c.Start()
+	// Schedule update every minute
+	s := gocron.NewScheduler(time.UTC)
+	s.Every(1).Minute().Do(func() {
+		UpdateSchedule(localMode)
+	})
+	s.StartAsync()
 
+	// Create router
 	router := httprouter.New()
 
+	// Set up routes
 	router.GET("/healthcheck/", HealthCheck)
 	router.GET("/api/", GetAll)
 	router.GET("/api/:departureTerminal/", GetDepartureTerminal)

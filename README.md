@@ -43,6 +43,8 @@ Options for each are as follows:
 "DUK"
 "LNG"
 "NAN"
+"FUL"
+"BOW"
 ```
 
 ### destination-terminal
@@ -72,6 +74,12 @@ Note: destination terminal must correspond with departure terminal, for example 
     "HSB"
 ]
 "NAN": [
+    "HSB"
+]
+"FUL": [
+    "SWB"
+]
+"BOW": [
     "HSB"
 ]
 ```
