@@ -19,6 +19,7 @@ type Route struct {
 type Sailing struct {
 	DepartureTime string `json:"time"`
 	ArrivalTime   string `json:"arrivalTime"`
+	IsCancelled   bool   `json:"isCancelled"`
 	Fill          int    `json:"fill"`
 	CarFill       int    `json:"carFill"`
 	OversizeFill  int    `json:"oversizeFill"`
@@ -35,7 +36,7 @@ func MakeScheduleLink(departure, destination string) string {
 }
 
 func ContainsSailingData(stringToCheck string) bool {
-	if strings.Contains(stringToCheck, "%") || strings.Contains(stringToCheck, "Full") {
+	if strings.Contains(stringToCheck, "%") || strings.Contains(stringToCheck, "FULL") || strings.Contains(stringToCheck, "Cancelled") {
 		return true
 	}
 
@@ -140,11 +141,17 @@ func ScrapeCapacityRoute(document *goquery.Document) Route {
 			fill := strings.TrimSpace(sailingData.Find(".cc-percentage").First().Text())
 			if fill == "Full" {
 				sailing.Fill = 100
+				sailing.IsCancelled = false
+			} else if strings.Contains(fill, "Cancelled") {
+				sailing.Fill = 0
+				sailing.IsCancelled = true
 			} else {
 				fill, err := strconv.Atoi(strings.Split(fill, "%")[0])
 				if err == nil {
 					sailing.Fill = 100 - fill
 				}
+
+				sailing.IsCancelled = false
 			}
 
 			// FILL BREAKDOWN
