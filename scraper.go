@@ -126,6 +126,11 @@ func ScrapeCapacityRoute(document *goquery.Document) Route {
 			timeAndBoatName := sailingData.Find(".mobile-paragraph").First().Text()
 			timeAndBoatNameArray := strings.Split(timeAndBoatName, "\n")
 
+			isTomorrow := false
+			if strings.Contains(timeAndBoatName, "Tomorrow") {
+				isTomorrow = true
+			}
+
 			for i := 0; i < len(timeAndBoatNameArray); i++ {
 				item := strings.TrimSpace(timeAndBoatNameArray[i])
 				item = strings.ReplaceAll(item, "\n", "")
@@ -138,25 +143,73 @@ func ScrapeCapacityRoute(document *goquery.Document) Route {
 			}
 
 			// FILL
-			fill := strings.TrimSpace(sailingData.Find(".cc-percentage").First().Text())
-			if fill == "Full" {
-				sailing.Fill = 100
-				sailing.IsCancelled = false
-			} else if strings.Contains(fill, "Cancelled") {
-				sailing.Fill = 0
-				sailing.IsCancelled = true
-			} else {
-				fill, err := strconv.Atoi(strings.Split(fill, "%")[0])
-				if err == nil {
-					sailing.Fill = 100 - fill
-				}
+			if isTomorrow {
+				sailingData.Find(".cc-message-updates").Each(func(index int, tomorrowFillData *goquery.Selection) {
+					fill := strings.TrimSpace(tomorrowFillData.Text())
+					if index == 0 {
+						if fill == "Full" {
+							sailing.Fill = 100
+							sailing.IsCancelled = false
+						} else if strings.Contains(fill, "Cancelled") {
+							sailing.Fill = 0
+							sailing.IsCancelled = true
+						} else {
+							fill, err := strconv.Atoi(strings.Split(fill, "%")[0])
+							if err == nil {
+								sailing.Fill = 100 - fill
+							}
 
-				sailing.IsCancelled = false
+							sailing.IsCancelled = false
+						}
+					} else if index == 1 {
+						tomorrowFillData.Find(".pcnt").Each(func(index int, tomorrowDetailedFillData *goquery.Selection) {
+							if index == 0 {
+								fill := strings.TrimSpace(tomorrowFillData.Text())
+
+								if fill == "Full" {
+									sailing.CarFill = 100
+								} else {
+									fill, err := strconv.Atoi(strings.Split(fill, "%")[0])
+									if err == nil {
+										sailing.CarFill = 100 - fill
+									}
+								}
+							} else if index == 1 {
+								fill := strings.TrimSpace(tomorrowFillData.Text())
+
+								if fill == "Full" {
+									sailing.OversizeFill = 100
+								} else {
+									fill, err := strconv.Atoi(strings.Split(fill, "%")[0])
+									if err == nil {
+										sailing.OversizeFill = 100 - fill
+									}
+								}
+							}
+						})
+					}
+				})
+			} else {
+				fill := strings.TrimSpace(sailingData.Find(".cc-percentage").First().Text())
+				if fill == "Full" {
+					sailing.Fill = 100
+					sailing.IsCancelled = false
+				} else if strings.Contains(fill, "Cancelled") {
+					sailing.Fill = 0
+					sailing.IsCancelled = true
+				} else {
+					fill, err := strconv.Atoi(strings.Split(fill, "%")[0])
+					if err == nil {
+						sailing.Fill = 100 - fill
+					}
+
+					sailing.IsCancelled = false
+				}
 			}
 
 			// FILL BREAKDOWN
 			sailingData.Find(".pcnt").Each(func(detailedFillIndex int, detailedFill *goquery.Selection) {
-				fill = strings.TrimSpace(detailedFill.Text())
+				fill := strings.TrimSpace(detailedFill.Text())
 				fillResult := 0
 
 				if fill == "FULL" {
