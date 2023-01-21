@@ -36,7 +36,7 @@ func MakeScheduleLink(departure, destination string) string {
 }
 
 func ContainsSailingData(stringToCheck string) bool {
-	if strings.Contains(stringToCheck, "%") || strings.Contains(stringToCheck, "FULL") || strings.Contains(stringToCheck, "Cancelled") {
+	if strings.Contains(stringToCheck, "%") || strings.Contains(stringToCheck, "FULL") || strings.Contains(stringToCheck, "Cancelled") || strings.Contains(stringToCheck, "Full") {
 		return true
 	}
 
