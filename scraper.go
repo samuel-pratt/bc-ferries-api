@@ -212,7 +212,7 @@ func ScrapeCapacityRoute(document *goquery.Document) Route {
 				fill := strings.TrimSpace(detailedFill.Text())
 				fillResult := 0
 
-				if fill == "FULL" {
+				if fill == "FULL" || fill == "Full" {
 					fillResult = 100
 				} else {
 					fill, err := strconv.Atoi(strings.Split(fill, "%")[0])
