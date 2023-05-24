@@ -147,7 +147,7 @@ func ScrapeCapacityRoute(document *goquery.Document) Route {
 				sailingData.Find(".cc-message-updates").Each(func(index int, tomorrowFillData *goquery.Selection) {
 					fill := strings.TrimSpace(tomorrowFillData.Text())
 					if index == 0 {
-						if fill == "Full" {
+						if fill == "FULL" || fill == "Full" {
 							sailing.Fill = 100
 							sailing.IsCancelled = false
 						} else if strings.Contains(fill, "Cancelled") {
@@ -166,7 +166,7 @@ func ScrapeCapacityRoute(document *goquery.Document) Route {
 							if index == 0 {
 								fill := strings.TrimSpace(tomorrowFillData.Text())
 
-								if fill == "Full" {
+								if fill == "FULL" || fill == "Full" {
 									sailing.CarFill = 100
 								} else {
 									fill, err := strconv.Atoi(strings.Split(fill, "%")[0])
@@ -177,7 +177,7 @@ func ScrapeCapacityRoute(document *goquery.Document) Route {
 							} else if index == 1 {
 								fill := strings.TrimSpace(tomorrowFillData.Text())
 
-								if fill == "Full" {
+								if fill == "FULL" || fill == "Full" {
 									sailing.OversizeFill = 100
 								} else {
 									fill, err := strconv.Atoi(strings.Split(fill, "%")[0])
@@ -191,7 +191,7 @@ func ScrapeCapacityRoute(document *goquery.Document) Route {
 				})
 			} else {
 				fill := strings.TrimSpace(sailingData.Find(".cc-percentage").First().Text())
-				if fill == "Full" {
+				if fill == "FULL" || fill == "Full" {
 					sailing.Fill = 100
 					sailing.IsCancelled = false
 				} else if strings.Contains(fill, "Cancelled") {

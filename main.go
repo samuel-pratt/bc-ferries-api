@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/go-co-op/gocron"
 	"github.com/julienschmidt/httprouter"
+	"github.com/relvacode/iso8601"
 )
 
 type Response struct {
@@ -23,7 +25,11 @@ var isSiteDown bool
 func UpdateSchedule(localMode bool) {
 	capacityRoutes := ScrapeRoutes(localMode)
 	// Add timestamp to data
-	currentTime := time.Now()
+	t := time.Now().Format("2006-01-02T15:04:05-0700")
+	currentTime, err := iso8601.ParseString(t)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Add schedule and timestamp to response object
 	response := Response{
@@ -42,7 +48,7 @@ func UpdateSchedule(localMode bool) {
 	}
 
 	fmt.Print("Updated sailing data at: ")
-	fmt.Println(time.Now())
+	fmt.Println(currentTime)
 }
 
 func enableCors(w *http.ResponseWriter) {
