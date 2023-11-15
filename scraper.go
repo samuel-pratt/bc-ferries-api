@@ -135,7 +135,7 @@ func ScrapeCapacityRoute(document *goquery.Document) Route {
 				item := strings.TrimSpace(timeAndBoatNameArray[i])
 				item = strings.ReplaceAll(item, "\n", "")
 
-                                if strings.Contains(strings.ToLower(item), "am") || strings.Contains(strings.ToLower(item), "pm") {
+                                if strings.Contains(strings.ToLower(item), " am") || strings.Contains(strings.ToLower(item), " pm") {
 					sailing.DepartureTime = item
 				} else if !strings.Contains(item, "Tomorrow") && len(item) > 5 {
 					sailing.VesselName = item
