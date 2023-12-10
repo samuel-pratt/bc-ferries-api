@@ -2,6 +2,24 @@
 
 The BC Ferries API provides current data on BC Ferries sailings and schedules for all routes.
 
+## Running Locally
+
+To run locally you must have a postgres database set up with the tables in `db_setup.sql` included. Create a `.env` file from the `.ev.sample` and fill it with the database info.
+
+Once that's set up just build the project with:
+
+```
+go build
+```
+
+And run it with:
+
+```
+./bc-ferries-api
+```
+
+And you're good to go!
+
 ## API Reference
 
 ### V2
