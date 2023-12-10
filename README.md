@@ -24,7 +24,7 @@ And you're good to go!
 
 ### V2
 
-Version 2 of the API encompasses data for all terminals and routes served by BC Ferries. The response is structured as an array of "route" objects, each defining departure and arrival terminals, along with a JSON object containing sailings for that specific route.
+Version 2 of the API includes data for all terminals and routes served by BC Ferries. The response is structured as an array of "route" objects, each defining departure and arrival terminals, along with a JSON object containing sailings for that specific route.
 
 #### Endpoints:
 
