@@ -25,6 +25,7 @@ type CapacityRoute struct {
 	RouteCode        string            `json:"routeCode"`
 	FromTerminalCode string            `json:"fromTerminalCode"`
 	ToTerminalCode   string            `json:"toTerminalCode"`
+	SailingDuration  string            `json:"sailingDuration"`
 	Sailings         []CapacitySailing `json:"sailings"`
 }
 
@@ -47,6 +48,7 @@ type NonCapacityRoute struct {
 	RouteCode        string               `json:"routeCode"`
 	FromTerminalCode string               `json:"fromTerminalCode"`
 	ToTerminalCode   string               `json:"toTerminalCode"`
+	SailingDuration  string               `json:"sailingDuration"`
 	Sailings         []NonCapacitySailing `json:"sailings"`
 }
 
@@ -108,7 +110,6 @@ func CapacitySailingsEndpoint(w http.ResponseWriter, r *http.Request, ps httprou
 	}
 
 	if len(response.Routes[0].Sailings) == 0 {
-
 		jsonString, _ := json.Marshal("BC Ferries Data Currently Down")
 
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -304,7 +305,7 @@ func ConvertV1ResponseToV2Response(allData AllDataResponse) map[string]map[strin
 		if allowedDestinations, ok := capacityRoutesFilter[fromTerminal]; ok {
 			if contains(allowedDestinations, toTerminal) {
 				route := Route{
-					SailingDuration: "",
+					SailingDuration: capRoute.SailingDuration,
 					Sailings:        []Sailing{},
 				}
 
@@ -340,7 +341,7 @@ func ConvertV1ResponseToV2Response(allData AllDataResponse) map[string]map[strin
 		if allowedDestinations, ok := nonCapacityRoutesFilter[fromTerminal]; ok {
 			if contains(allowedDestinations, toTerminal) {
 				route := Route{
-					SailingDuration: "",
+					SailingDuration: nonCapRoute.SailingDuration,
 					Sailings:        []Sailing{},
 				}
 

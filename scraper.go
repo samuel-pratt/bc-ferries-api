@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -120,12 +119,6 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 		}
 
 		compareString := strings.ToLower(strings.Join(reducedArray, " |"))
-		b, _ := json.Marshal(reducedArray)
-		if fromTerminalCode == "SWB" && toTerminalCode == "TSA" {
-
-			fmt.Printf("%v", string(b))
-			fmt.Println()
-		}
 
 		if len(reducedArray) == 3 && reducedArray[2] == "..." || strings.Contains(compareString, "Departed") {
 			sailing.SailingStatus = "current"
@@ -221,6 +214,14 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 		route.Sailings = append(route.Sailings, sailing)
 	})
 
+	sailingDuration := strings.ReplaceAll(document.Find("span:contains('Sailing Duration')").Text(), "\u00A0", " ")
+
+	if len(strings.TrimSpace(sailingDuration)) == 0 {
+		sailingDuration = ""
+	} else {
+		sailingDuration = strings.TrimSpace(sailingDuration[len(sailingDuration)-7:])
+	}
+
 	sailingsJson, err := json.Marshal(route.Sailings)
 	if err != nil {
 		log.Error(err)
@@ -231,19 +232,21 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 			route_code,
 			from_terminal_code,
 			to_terminal_code,
+			sailing_duration,
 			sailings
 		)
 		VALUES
-			($1, $2, $3, $4) ON CONFLICT (route_code) DO
+			($1, $2, $3, $4, $5) ON CONFLICT (route_code) DO
 		UPDATE
 		SET
 			route_code = EXCLUDED.route_code,
 			from_terminal_code = EXCLUDED.from_terminal_code,
 			to_terminal_code = EXCLUDED.to_terminal_code,
+			sailing_duration = EXCLUDED.sailing_duration,
 			sailings = EXCLUDED.sailings
 		WHERE
 			capacity_routes.route_code = EXCLUDED.route_code`
-	_, err = db.Exec(sqlStatement, route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingsJson)
+	_, err = db.Exec(sqlStatement, route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingDuration, sailingsJson)
 	if err != nil {
 		log.Error(err)
 	}
@@ -330,24 +333,34 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode string,
 		log.Error(err)
 	}
 
+	sailingDuration := ""
+
+	document.Find("table#dailyScheduleTableOnward").Find("tbody").Find("tr").First().Find("td").Each(func(index int, td *goquery.Selection) {
+		if index == 3 {
+			sailingDuration = strings.TrimSpace(td.Text())
+		}
+	})
+
 	sqlStatement := `
 		INSERT INTO non_capacity_routes (
 			route_code, 
 			from_terminal_code, 
 			to_terminal_code, 
+			sailing_duration,
 			sailings
 		) 
 		VALUES 
-			($1, $2, $3, $4) ON CONFLICT (route_code) DO 
+			($1, $2, $3, $4, $5) ON CONFLICT (route_code) DO 
 		UPDATE 
 		SET 
 			route_code = EXCLUDED.route_code, 
 			from_terminal_code = EXCLUDED.from_terminal_code, 
 			to_terminal_code = EXCLUDED.to_terminal_code,
+			sailing_duration = EXCLUDED.sailing_duration,
 			sailings = EXCLUDED.sailings 
 		WHERE 
 			non_capacity_routes.route_code = EXCLUDED.route_code`
-	_, err = db.Exec(sqlStatement, route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingsJson)
+	_, err = db.Exec(sqlStatement, route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingDuration, sailingsJson)
 	if err != nil {
 		log.Error(err)
 	}

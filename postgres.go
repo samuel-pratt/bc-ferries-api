@@ -61,7 +61,7 @@ func GetCapacitySailings() []CapacityRoute {
 		var route CapacityRoute
 		var sailings []uint8
 
-		err := rows.Scan(&route.RouteCode, &route.FromTerminalCode, &route.ToTerminalCode, &sailings)
+		err := rows.Scan(&route.RouteCode, &route.FromTerminalCode, &route.ToTerminalCode, &route.SailingDuration, &sailings)
 		if err != nil {
 			log.Error(err)
 		}
@@ -98,7 +98,7 @@ func GetNonCapacitySailings() []NonCapacityRoute {
 		var route NonCapacityRoute
 		var sailings []uint8
 
-		err := rows.Scan(&route.RouteCode, &route.FromTerminalCode, &route.ToTerminalCode, &sailings)
+		err := rows.Scan(&route.RouteCode, &route.FromTerminalCode, &route.ToTerminalCode, &route.SailingDuration, &sailings)
 		if err != nil {
 			log.Error(err)
 		}
