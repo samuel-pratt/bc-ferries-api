@@ -216,10 +216,12 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 
 	sailingDuration := strings.ReplaceAll(document.Find("span:contains('Sailing Duration')").Text(), "\u00A0", " ")
 
+	sailingDuration = strings.ReplaceAll(sailingDuration, "Sailing duration:", "")
+
 	if len(strings.TrimSpace(sailingDuration)) == 0 {
 		sailingDuration = ""
 	} else {
-		sailingDuration = strings.TrimSpace(sailingDuration[len(sailingDuration)-7:])
+		sailingDuration = strings.TrimSpace(sailingDuration)
 	}
 
 	sailingsJson, err := json.Marshal(route.Sailings)
