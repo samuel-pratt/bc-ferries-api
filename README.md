@@ -54,7 +54,7 @@ This API uses the following route codes used by BC Ferries:
 - "FUL" -> Fulford Harbour (Salt Spring Island)
 - "HSB" -> Horseshoe Bay
 - "NAN" -> Departure Bay (Nanaimo)
-- "LNG" -> Langford
+- "LNG" -> Langdale
 - "BOW" -> Bowen Island
 
 The API endpoint format is:
