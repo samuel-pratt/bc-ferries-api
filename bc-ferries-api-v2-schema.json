@@ -1,0 +1,168 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "BC Ferries API V2 Response Schema",
+    "type": "object",
+    "properties": {
+      "capacityRoutes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "routeCode": {
+              "type": "string"
+            },
+            "fromTerminalCode": {
+              "type": "string"
+            },
+            "toTerminalCode": {
+              "type": "string"
+            },
+            "sailingDuration": {
+              "type": "string"
+            },
+            "sailings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "time": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^(1[0-2]|0?[1-9]):[0-5][0-9] (am|pm)$"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["none", "...", "ETA", "Variable"]
+                      }
+                    ]
+                  },
+                  "arrivalTime": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^(1[0-2]|0?[1-9]):[0-5][0-9] (am|pm)$"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["none", "...", "ETA", "Variable"]
+                      }
+                    ]
+                  },
+                  "sailingStatus": {
+                    "type": "string"
+                  },
+                  "fill": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "carFill": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "oversizeFill": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "vesselName": {
+                    "type": "string"
+                  },
+                  "vesselStatus": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "time",
+                  "arrivalTime",
+                  "sailingStatus",
+                  "fill",
+                  "carFill",
+                  "oversizeFill",
+                  "vesselName",
+                  "vesselStatus"
+                ]
+              }
+            }
+          },
+          "required": [
+            "routeCode",
+            "fromTerminalCode",
+            "toTerminalCode",
+            "sailingDuration",
+            "sailings"
+          ]
+        }
+      },
+      "nonCapacityRoutes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "routeCode": {
+              "type": "string"
+            },
+            "fromTerminalCode": {
+              "type": "string"
+            },
+            "toTerminalCode": {
+              "type": "string"
+            },
+            "sailingDuration": {
+              "type": "string"
+            },
+            "sailings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "time": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^(1[0-2]|0?[1-9]):[0-5][0-9] [ap]m$"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["none", "...", "ETA"]
+                      }
+                    ]
+                  },
+                  "arrivalTime": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^(1[0-2]|0?[1-9]):[0-5][0-9] [ap]m$"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["none", "...", "ETA"]
+                      }
+                    ]
+                  },
+                  "vesselName": {
+                    "type": "string"
+                  },
+                  "vesselStatus": {
+                    "type": "string"
+                  }
+                },
+                "required": ["time", "arrivalTime", "vesselName", "vesselStatus"]
+              }
+            }
+          },
+          "required": [
+            "routeCode",
+            "fromTerminalCode",
+            "toTerminalCode",
+            "sailingDuration",
+            "sailings"
+          ]
+        }
+      }
+    },
+    "required": ["capacityRoutes", "nonCapacityRoutes"]
+  }
+  
