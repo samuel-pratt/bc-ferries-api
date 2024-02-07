@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -106,8 +105,6 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 
 		sailingDataString := strings.TrimSpace(sailingData.Text())
 		sailingDataString = strings.ReplaceAll(sailingDataString, "\t", "")
-		var re = regexp.MustCompile(`\([^()]*\)`)
-		sailingDataString = re.ReplaceAllString(sailingDataString, ``)
 
 		sailingDataArray := strings.Split(sailingDataString, "\n")
 		var reducedArray []string
@@ -117,101 +114,102 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 				reducedArray = append(reducedArray, strings.TrimSpace(sailingDataArray[i]))
 			}
 		}
-
 		compareString := strings.ToLower(strings.Join(reducedArray, " |"))
 
-		if len(reducedArray) == 3 && reducedArray[2] == "..." || strings.Contains(compareString, "Departed") {
-			sailing.SailingStatus = "current"
-			sailing.DepartureTime = reducedArray[0]
-			sailing.VesselName = reducedArray[1]
-			sailing.ArrivalTime = reducedArray[2]
-		} else if strings.Contains(compareString, "arrived") {
-			sailing.SailingStatus = "past"
-			if len(reducedArray) >= 5 {
+		if !strings.Contains(compareString, "dangerous goods only") {
+			if len(reducedArray) == 3 && reducedArray[2] == "..." || strings.Contains(compareString, "Departed") {
+				sailing.SailingStatus = "current"
+				sailing.DepartureTime = reducedArray[0]
+				sailing.VesselName = reducedArray[1]
+				sailing.ArrivalTime = reducedArray[2]
+			} else if strings.Contains(compareString, "arrived") {
+				sailing.SailingStatus = "past"
+				if len(reducedArray) >= 5 {
+					sailing.DepartureTime = reducedArray[2]
+					sailing.VesselName = reducedArray[3]
+					sailing.ArrivalTime = strings.Split(reducedArray[4], " ")[1] + " " + strings.Split(reducedArray[4], " ")[2]
+				}
+			} else if strings.Contains(compareString, "...") {
+				sailing.SailingStatus = "past"
+
 				sailing.DepartureTime = reducedArray[2]
-				sailing.VesselName = reducedArray[3]
-				sailing.ArrivalTime = strings.Split(reducedArray[4], " ")[1] + strings.Split(reducedArray[4], " ")[2]
-			}
-		} else if strings.Contains(compareString, "...") {
-			sailing.SailingStatus = "past"
+				sailing.VesselName = reducedArray[1]
 
-			sailing.DepartureTime = reducedArray[2]
-			sailing.VesselName = reducedArray[1]
+				if len(reducedArray) >= 5 {
 
-			if len(reducedArray) >= 5 {
+					sailing.ArrivalTime = reducedArray[4]
+				}
+			} else if strings.Contains(compareString, "eta") {
+				sailing.SailingStatus = "current"
 
-				sailing.ArrivalTime = reducedArray[4]
-			}
-		} else if strings.Contains(compareString, "eta") {
-			sailing.SailingStatus = "current"
+				if len(reducedArray) >= 7 {
+					sailing.DepartureTime = reducedArray[2]
+					sailing.VesselName = reducedArray[3]
+					sailing.ArrivalTime = reducedArray[6]
+				}
+			} else if strings.Contains(compareString, "cancelled") {
+				sailing.SailingStatus = "cancelled"
 
-			if len(reducedArray) >= 7 {
-				sailing.DepartureTime = reducedArray[2]
-				sailing.VesselName = reducedArray[3]
-				sailing.ArrivalTime = reducedArray[6]
-			}
-		} else if strings.Contains(compareString, "cancelled") {
-			sailing.SailingStatus = "cancelled"
+				sailing.DepartureTime = reducedArray[0]
+				sailing.VesselName = reducedArray[1]
+			} else if strings.Contains(compareString, "%") || strings.Contains(compareString, "full") {
+				sailing.SailingStatus = "future"
 
-			sailing.DepartureTime = reducedArray[0]
-			sailing.VesselName = reducedArray[1]
-		} else if strings.Contains(compareString, "%") || strings.Contains(compareString, "full") {
-			sailing.SailingStatus = "future"
+				sailing.DepartureTime = reducedArray[0]
+				sailing.VesselName = reducedArray[1]
+				sailing.ArrivalTime = "none"
 
-			sailing.DepartureTime = reducedArray[0]
-			sailing.VesselName = reducedArray[1]
-			sailing.ArrivalTime = "none"
-
-			if strings.Contains(strings.Join(reducedArray, ""), "Delayed") && len(reducedArray) == 5 && strings.Contains(strings.Join(reducedArray, ""), "Full") {
-				sailing.Fill = 100
-				sailing.CarFill = 100
-				sailing.OversizeFill = 100
-			} else if len(reducedArray) == 3 || len(reducedArray) == 4 {
-				if strings.Contains(strings.Join(reducedArray, ""), "Full") || strings.Contains(strings.Join(reducedArray, ""), "FULL") {
+				if strings.Contains(strings.Join(reducedArray, ""), "Delayed") && len(reducedArray) == 5 && strings.Contains(strings.Join(reducedArray, ""), "Full") {
 					sailing.Fill = 100
 					sailing.CarFill = 100
 					sailing.OversizeFill = 100
-				} else {
-					fill, err := strconv.Atoi(strings.Split(reducedArray[2], "%")[0])
-					if err == nil {
-						sailing.Fill = 100 - fill
+				} else if len(reducedArray) == 3 || len(reducedArray) == 4 {
+					if strings.Contains(strings.Join(reducedArray, ""), "Full") || strings.Contains(strings.Join(reducedArray, ""), "FULL") {
+						sailing.Fill = 100
+						sailing.CarFill = 100
+						sailing.OversizeFill = 100
+					} else {
+						fill, err := strconv.Atoi(strings.Split(reducedArray[2], "%")[0])
+						if err == nil {
+							sailing.Fill = 100 - fill
+						}
 					}
-				}
-			} else if len(reducedArray) == 5 || len(reducedArray) == 6 {
-				if strings.Contains(reducedArray[2], "FULL") || strings.Contains(reducedArray[2], "Full") {
-					sailing.Fill = 100
-				} else {
-					fill, err := strconv.Atoi(strings.Split(reducedArray[2], "%")[0])
-					if err == nil {
-						sailing.Fill = 100 - fill
+				} else if len(reducedArray) == 5 || len(reducedArray) == 6 {
+					if strings.Contains(reducedArray[2], "FULL") || strings.Contains(reducedArray[2], "Full") {
+						sailing.Fill = 100
+					} else {
+						fill, err := strconv.Atoi(strings.Split(reducedArray[2], "%")[0])
+						if err == nil {
+							sailing.Fill = 100 - fill
+						}
 					}
-				}
 
-				if strings.Contains(reducedArray[3], "FULL") || strings.Contains(reducedArray[3], "Full") {
-					sailing.CarFill = 100
-				} else {
-					fill, err := strconv.Atoi(strings.Split(reducedArray[3], "%")[0])
-					if err == nil {
-						sailing.CarFill = 100 - fill
+					if strings.Contains(reducedArray[3], "FULL") || strings.Contains(reducedArray[3], "Full") {
+						sailing.CarFill = 100
+					} else {
+						fill, err := strconv.Atoi(strings.Split(reducedArray[3], "%")[0])
+						if err == nil {
+							sailing.CarFill = 100 - fill
+						}
 					}
-				}
 
-				if strings.Contains(reducedArray[4], "FULL") || strings.Contains(reducedArray[4], "Full") {
-					sailing.OversizeFill = 100
-				} else {
-					fill, err := strconv.Atoi(strings.Split(reducedArray[4], "%")[0])
-					if err == nil {
-						sailing.OversizeFill = 100 - fill
+					if strings.Contains(reducedArray[4], "FULL") || strings.Contains(reducedArray[4], "Full") {
+						sailing.OversizeFill = 100
+					} else {
+						fill, err := strconv.Atoi(strings.Split(reducedArray[4], "%")[0])
+						if err == nil {
+							sailing.OversizeFill = 100 - fill
+						}
 					}
 				}
 			}
-		}
 
-		if strings.Contains(sailing.DepartureTime, "Delayed") {
-			sailing.DepartureTime = strings.TrimSpace(strings.Split(sailing.DepartureTime, "Delayed")[0])
-		}
+			if strings.Contains(sailing.DepartureTime, "Delayed") {
+				sailing.DepartureTime = strings.TrimSpace(strings.Split(sailing.DepartureTime, "Delayed")[0])
+			}
 
-		route.Sailings = append(route.Sailings, sailing)
+			route.Sailings = append(route.Sailings, sailing)
+		}
 	})
 
 	sailingDuration := strings.ReplaceAll(document.Find("span:contains('Sailing Duration')").Text(), "\u00A0", " ")
