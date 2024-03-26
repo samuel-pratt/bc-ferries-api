@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -115,7 +116,7 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 			}
 		}
 		compareString := strings.ToLower(strings.Join(reducedArray, " |"))
-
+		fmt.Println(compareString)
 		if !strings.Contains(compareString, "dangerous goods only") {
 			if len(reducedArray) == 3 && reducedArray[2] == "..." || strings.Contains(compareString, "Departed") {
 				sailing.SailingStatus = "current"
