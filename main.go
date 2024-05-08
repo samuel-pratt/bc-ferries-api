@@ -41,7 +41,7 @@ func SetupCron() {
 	})
 
 	s.Every(1).Hour().Do(func() {
-		// ScrapeNonCapacityRoutes()
+		ScrapeNonCapacityRoutes()
 	})
 
 	s.StartAsync()
