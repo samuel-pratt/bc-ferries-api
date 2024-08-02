@@ -4,10 +4,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"sync"
-
-	"github.com/charmbracelet/log"
 )
 
 type postgresSingleton struct {
@@ -22,16 +21,17 @@ func GetPostgresInstance() *sql.DB {
 		postgresInstance = &postgresSingleton{}
 
 		var (
-			DB_HOST = os.Getenv("PGHOST")
-			DB_PORT = os.Getenv("PGPORT")
-			DB_USER = os.Getenv("PGUSER")
-			DB_PASS = os.Getenv("PGPASSWORD")
-			DB_NAME = os.Getenv("PGDATABASE")
+			DB_HOST = os.Getenv("DB_HOST")
+			DB_PORT = os.Getenv("DB_PORT")
+			DB_USER = os.Getenv("DB_USER")
+			DB_PASS = os.Getenv("DB_PASS")
+			DB_NAME = os.Getenv("DB_NAME")
+			DB_SSL  = os.Getenv("DB_SSL")
 		)
 
 		postgresqlDbInfo := fmt.Sprintf("host=%s port=%s user=%s "+
-			"password=%s dbname=%s sslmode=require",
-			DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME)
+			"password=%s dbname=%s sslmode=%s",
+			DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME, DB_SSL)
 
 		db, err := sql.Open("postgres", postgresqlDbInfo)
 		if err != nil {
@@ -53,7 +53,7 @@ func GetCapacitySailings() []CapacityRoute {
 
 	rows, err := db.Query(sqlStatement)
 	if err != nil {
-		log.Error(err)
+		log.Fatal(err)
 	}
 	defer rows.Close()
 
@@ -63,7 +63,7 @@ func GetCapacitySailings() []CapacityRoute {
 
 		err := rows.Scan(&route.RouteCode, &route.FromTerminalCode, &route.ToTerminalCode, &route.SailingDuration, &sailings)
 		if err != nil {
-			log.Error(err)
+			log.Fatal(err)
 		}
 
 		content := []CapacitySailing{}
@@ -75,7 +75,7 @@ func GetCapacitySailings() []CapacityRoute {
 	}
 	err = rows.Err()
 	if err != nil {
-		log.Error(err)
+		log.Fatal(err)
 	}
 
 	return routes
@@ -90,7 +90,7 @@ func GetNonCapacitySailings() []NonCapacityRoute {
 
 	rows, err := db.Query(sqlStatement)
 	if err != nil {
-		log.Error(err)
+		log.Fatal(err)
 	}
 	defer rows.Close()
 
@@ -100,7 +100,7 @@ func GetNonCapacitySailings() []NonCapacityRoute {
 
 		err := rows.Scan(&route.RouteCode, &route.FromTerminalCode, &route.ToTerminalCode, &route.SailingDuration, &sailings)
 		if err != nil {
-			log.Error(err)
+			log.Fatal(err)
 		}
 
 		content := []NonCapacitySailing{}
@@ -112,7 +112,7 @@ func GetNonCapacitySailings() []NonCapacityRoute {
 	}
 	err = rows.Err()
 	if err != nil {
-		log.Error(err)
+		log.Fatal(err)
 	}
 
 	return routes
