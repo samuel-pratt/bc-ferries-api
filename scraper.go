@@ -239,12 +239,14 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 										}
 
 										// fmt.Println(fillDocument.Text())
-										fillDocument.Find("span.percentage").Each(func(o int, percentageText *goquery.Selection) {
+										fillDocument.Find("p.vehicle-icon-text").Each(func(o int, percentageText *goquery.Selection) {
 											if o == 0 {
 												fillPercentage := strings.TrimSpace(percentageText.Text())
 
 												if strings.Contains(fillPercentage, "Full") || strings.Contains(fillPercentage, "full") || strings.Contains(fillPercentage, "FULL") {
 													sailing.Fill = 100
+													sailing.CarFill = 100
+													sailing.OversizeFill = 100
 												} else {
 													fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
 													if err != nil {
@@ -257,7 +259,7 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 												fillPercentage := strings.TrimSpace(percentageText.Text())
 
 												if strings.Contains(fillPercentage, "Full") || strings.Contains(fillPercentage, "full") || strings.Contains(fillPercentage, "FULL") {
-													sailing.Fill = 100
+													sailing.CarFill = 100
 												} else {
 													fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
 													if err != nil {
@@ -270,7 +272,7 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 												fillPercentage := strings.TrimSpace(percentageText.Text())
 
 												if strings.Contains(fillPercentage, "Full") || strings.Contains(fillPercentage, "full") || strings.Contains(fillPercentage, "FULL") {
-													sailing.Fill = 100
+													sailing.OversizeFill = 100
 												} else {
 													fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
 													if err != nil {
