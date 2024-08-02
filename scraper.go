@@ -289,6 +289,8 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 							} else {
 								if strings.Contains(fillDetailsString, "Full") {
 									sailing.Fill = 100
+									sailing.CarFill = 100
+									sailing.OversizeFill = 100
 								} else {
 									fillPercentage := strings.TrimSpace(td.Find("span.cc-vessel-percent-full").Text())
 
