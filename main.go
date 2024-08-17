@@ -51,10 +51,14 @@ func main() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file: File not found")
+	} else {
+		fmt.Println("INFO: .env file loaded")
 	}
 
-	if os.Getenv("PGHOST") == "" || os.Getenv("PGPORT") == "" || os.Getenv("PGUSER") == "" || os.Getenv("PGPASSWORD") == "" || os.Getenv("PGDATABASE") == "" {
+	if os.Getenv("DB_USER") == "" || os.Getenv("DB_PASS") == "" || os.Getenv("DB_NAME") == "" || os.Getenv("DB_HOST") == "" || os.Getenv("DB_PORT") == "" || os.Getenv("DB_SSL") == "" {
 		log.Fatal("Error loading .env file: Missing variables")
+	} else {
+		fmt.Println("INFO: .env file valid")
 	}
 
 	db := GetPostgresInstance()
@@ -65,7 +69,7 @@ func main() {
 	var port = os.Getenv("PORT")
 
 	if port == "" {
-		port = "4747"
+		port = "8080"
 		fmt.Println("INFO: No PORT environment variable detected, defaulting to " + port)
 	}
 

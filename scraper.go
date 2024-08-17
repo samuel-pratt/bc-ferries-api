@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
+	"log"
+
 	"github.com/PuerkitoBio/goquery"
-	"github.com/charmbracelet/log"
 )
 
 /*
@@ -59,20 +61,20 @@ func ScrapeCapacityRoutes() {
 			client := &http.Client{}
 			req, err := http.NewRequest("GET", link, nil)
 			if err != nil {
-				log.Error(err)
+				log.Fatal(err)
 			}
 
 			req.Header.Add("User-Agent", "Mozilla")
 			response, err := client.Do(req)
 			if err != nil {
-				log.Error(err)
+				log.Fatal(err)
 			}
 
 			defer response.Body.Close()
 
 			document, err := goquery.NewDocumentFromReader(response.Body)
 			if err != nil {
-				log.Error(err)
+				log.Fatal(err)
 			}
 
 			ScrapeCapacityRoute(document, departureTerminals[i], destinationTerminals[i][j])
@@ -101,116 +103,213 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 		Sailings:         []CapacitySailing{},
 	}
 
-	document.Find(".cc-status-td ").Each(func(index int, sailingData *goquery.Selection) {
-		sailing := CapacitySailing{}
+	document.Find("table.detail-departure-table").Each(func(i int, table *goquery.Selection) {
+		table.Find("tbody").Each(func(j int, tbody *goquery.Selection) {
+			tbody.Find("tr.mobile-friendly-row").Each(func(k int, row *goquery.Selection) {
+				// Init sailing
+				sailing := CapacitySailing{}
 
-		sailingDataString := strings.TrimSpace(sailingData.Text())
-		sailingDataString = strings.ReplaceAll(sailingDataString, "\t", "")
+				row.Find("td").Each(func(l int, td *goquery.Selection) {
+					if strings.Contains(row.Text(), "Arrived") {
+						sailing.SailingStatus = "past"
 
-		sailingDataArray := strings.Split(sailingDataString, "\n")
-		var reducedArray []string
+						if l == 0 {
+							timeString := strings.Join(strings.Fields(strings.TrimSpace(td.Find("p").Text())), " ")
 
-		for i := range sailingDataArray {
-			if strings.TrimSpace(sailingDataArray[i]) != "" {
-				reducedArray = append(reducedArray, strings.TrimSpace(sailingDataArray[i]))
-			}
-		}
-		compareString := strings.ToLower(strings.Join(reducedArray, " |"))
-		fmt.Println(compareString)
-		if !strings.Contains(compareString, "dangerous goods only") {
-			if len(reducedArray) == 3 && reducedArray[2] == "..." || strings.Contains(compareString, "Departed") {
-				sailing.SailingStatus = "current"
-				sailing.DepartureTime = reducedArray[0]
-				sailing.VesselName = reducedArray[1]
-				sailing.ArrivalTime = reducedArray[2]
-			} else if strings.Contains(compareString, "arrived") {
-				sailing.SailingStatus = "past"
-				if len(reducedArray) >= 5 {
-					sailing.DepartureTime = reducedArray[2]
-					sailing.VesselName = reducedArray[3]
-					sailing.ArrivalTime = strings.Split(reducedArray[4], " ")[1] + " " + strings.Split(reducedArray[4], " ")[2]
-				}
-			} else if strings.Contains(compareString, "...") {
-				sailing.SailingStatus = "past"
+							re := regexp.MustCompile(`(?P<DepartureTime>\d{1,2}:\d{2} [ap]m) Departed (?P<ActualDepartureTime>\d{1,2}:\d{2} [ap]m) (?P<VesselName>.+)`)
 
-				sailing.DepartureTime = reducedArray[2]
-				sailing.VesselName = reducedArray[1]
+							// Find the matches
+							matches := re.FindStringSubmatch(strings.Join(strings.Fields(timeString), " "))
 
-				if len(reducedArray) >= 5 {
+							if len(matches) == 0 {
+								fmt.Println("No matches found, regex error")
+							} else {
+								// Extracting named groups
+								actualDepartureTime := matches[2]
+								vesselName := matches[3]
 
-					sailing.ArrivalTime = reducedArray[4]
-				}
-			} else if strings.Contains(compareString, "eta") {
-				sailing.SailingStatus = "current"
+								sailing.DepartureTime = actualDepartureTime
+								sailing.VesselName = vesselName
+							}
+						} else if l == 1 {
+							arrivalString := td.Find("div.cc-message-updates").Text()
 
-				if len(reducedArray) >= 7 {
-					sailing.DepartureTime = reducedArray[2]
-					sailing.VesselName = reducedArray[3]
-					sailing.ArrivalTime = reducedArray[6]
-				}
-			} else if strings.Contains(compareString, "cancelled") {
-				sailing.SailingStatus = "cancelled"
+							re := regexp.MustCompile(`Arrived: (?P<ArrivalTime>\d{1,2}:\d{2} [ap]m)`)
 
-				sailing.DepartureTime = reducedArray[0]
-				sailing.VesselName = reducedArray[1]
-			} else if strings.Contains(compareString, "%") || strings.Contains(compareString, "full") {
-				sailing.SailingStatus = "future"
+							// Find the matches
+							matches := re.FindStringSubmatch(strings.Join(strings.Fields(arrivalString), " "))
 
-				sailing.DepartureTime = reducedArray[0]
-				sailing.VesselName = reducedArray[1]
-				sailing.ArrivalTime = "none"
+							if len(matches) == 0 {
+								fmt.Println("No matches found, regex error")
+							} else {
+								// Extracting named group
+								arrivalTime := matches[1]
 
-				if strings.Contains(strings.Join(reducedArray, ""), "Delayed") && len(reducedArray) == 5 && strings.Contains(strings.Join(reducedArray, ""), "Full") {
-					sailing.Fill = 100
-					sailing.CarFill = 100
-					sailing.OversizeFill = 100
-				} else if len(reducedArray) == 3 || len(reducedArray) == 4 {
-					if strings.Contains(strings.Join(reducedArray, ""), "Full") || strings.Contains(strings.Join(reducedArray, ""), "FULL") {
-						sailing.Fill = 100
-						sailing.CarFill = 100
-						sailing.OversizeFill = 100
-					} else {
-						fill, err := strconv.Atoi(strings.Split(reducedArray[2], "%")[0])
-						if err == nil {
-							sailing.Fill = 100 - fill
+								sailing.ArrivalTime = arrivalTime
+							}
+						}
+					} else if strings.Contains(row.Text(), "ETA") || strings.Contains(row.Text(), "...") {
+						sailing.SailingStatus = "current"
+
+						if l == 0 {
+							timeString := strings.Join(strings.Fields(strings.TrimSpace(td.Find("p").Text())), " ")
+
+							re := regexp.MustCompile(`(?P<DepartureTime>\d{1,2}:\d{2} [ap]m) Departed (?P<ActualDepartureTime>\d{1,2}:\d{2} [ap]m) (?P<VesselName>.+)`)
+
+							// Find the matches
+							matches := re.FindStringSubmatch(strings.Join(strings.Fields(timeString), " "))
+
+							if len(matches) == 0 {
+								fmt.Println("No matches found, regex error")
+							} else {
+								// Extracting named groups
+								actualDepartureTime := matches[2]
+								vesselName := matches[3]
+
+								sailing.DepartureTime = actualDepartureTime
+								sailing.VesselName = vesselName
+							}
+						} else if l == 1 {
+							etaString := td.Find("div.cc-message-updates").Text()
+
+							re := regexp.MustCompile(`ETA : (?P<ETA>\d{1,2}:\d{2} [ap]m|Variable)`)
+
+							// Find the matches
+							matches := re.FindStringSubmatch(strings.Join(strings.Fields(etaString), " "))
+
+							if len(matches) == 0 {
+								sailing.ArrivalTime = "..."
+							} else {
+								// Extracting named group
+								etaTime := matches[1]
+
+								sailing.ArrivalTime = etaTime
+							}
+						}
+					} else if strings.Contains(row.Text(), "Details") || strings.Contains(row.Text(), "FULL") || strings.Contains(row.Text(), "Full") || strings.Contains(row.Text(), "%") {
+						sailing.SailingStatus = "future"
+
+						if l == 0 {
+							// schedule time, vessel
+							timeString := strings.Join(strings.Fields(strings.TrimSpace(td.Text())), " ")
+
+							re := regexp.MustCompile(`(?P<Time>\d{1,2}:\d{2} [ap]m)(?: \(Tomorrow\))? (?P<VesselName>.+)`)
+
+							// Find the matches
+							matches := re.FindStringSubmatch(strings.Join(strings.Fields(timeString), " "))
+
+							if len(matches) == 0 {
+								fmt.Println("No matches found, regex error")
+							} else {
+								// Extracting named groups
+								time := matches[1]
+								vesselName := matches[2]
+
+								sailing.DepartureTime = time
+								sailing.VesselName = vesselName
+							}
+						} else if l == 1 {
+							// details link
+							// if word "Details" is in row, request from link, otherwise take percentage
+							fillDetailsString := td.Text()
+
+							if strings.Contains(fillDetailsString, "Details") {
+								td.Find("a.vehicle-info-link").Each(func(m int, s *goquery.Selection) {
+									href, exists := s.Attr("href")
+									link := strings.ReplaceAll("https://www.bcferries.com"+href, " ", "%20")
+
+									if exists {
+										client := &http.Client{}
+										req, err := http.NewRequest("GET", link, nil)
+										if err != nil {
+											log.Fatal(err)
+										}
+
+										req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+										response, err := client.Do(req)
+										if err != nil {
+											log.Fatal(err)
+										}
+
+										defer response.Body.Close()
+
+										fillDocument, err := goquery.NewDocumentFromReader(response.Body)
+										if err != nil {
+											log.Fatal(err)
+										}
+
+										// fmt.Println(fillDocument.Text())
+										fillDocument.Find("p.vehicle-icon-text").Each(func(o int, percentageText *goquery.Selection) {
+											if o == 0 {
+												fillPercentage := strings.TrimSpace(percentageText.Text())
+
+												if strings.Contains(fillPercentage, "Full") || strings.Contains(fillPercentage, "full") || strings.Contains(fillPercentage, "FULL") {
+													sailing.Fill = 100
+													sailing.CarFill = 100
+													sailing.OversizeFill = 100
+												} else {
+													fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
+													if err != nil {
+														// ... handle error
+													}
+
+													sailing.Fill = 100 - fillPercentageInt
+												}
+											} else if o == 1 {
+												fillPercentage := strings.TrimSpace(percentageText.Text())
+
+												if strings.Contains(fillPercentage, "Full") || strings.Contains(fillPercentage, "full") || strings.Contains(fillPercentage, "FULL") {
+													sailing.CarFill = 100
+												} else {
+													fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
+													if err != nil {
+														// ... handle error
+													}
+
+													sailing.CarFill = 100 - fillPercentageInt
+												}
+											} else if o == 2 {
+												fillPercentage := strings.TrimSpace(percentageText.Text())
+
+												if strings.Contains(fillPercentage, "Full") || strings.Contains(fillPercentage, "full") || strings.Contains(fillPercentage, "FULL") {
+													sailing.OversizeFill = 100
+												} else {
+													fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
+													if err != nil {
+														// ... handle error
+													}
+
+													sailing.OversizeFill = 100 - fillPercentageInt
+												}
+											}
+										})
+
+									}
+								})
+							} else {
+								if strings.Contains(fillDetailsString, "Full") {
+									sailing.Fill = 100
+									sailing.CarFill = 100
+									sailing.OversizeFill = 100
+								} else {
+									fillPercentage := strings.TrimSpace(td.Find("span.cc-vessel-percent-full").Text())
+
+									fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
+									if err != nil {
+										// ... handle error
+									}
+
+									sailing.Fill = 100 - fillPercentageInt
+								}
+							}
 						}
 					}
-				} else if len(reducedArray) == 5 || len(reducedArray) == 6 {
-					if strings.Contains(reducedArray[2], "FULL") || strings.Contains(reducedArray[2], "Full") {
-						sailing.Fill = 100
-					} else {
-						fill, err := strconv.Atoi(strings.Split(reducedArray[2], "%")[0])
-						if err == nil {
-							sailing.Fill = 100 - fill
-						}
-					}
+				})
 
-					if strings.Contains(reducedArray[3], "FULL") || strings.Contains(reducedArray[3], "Full") {
-						sailing.CarFill = 100
-					} else {
-						fill, err := strconv.Atoi(strings.Split(reducedArray[3], "%")[0])
-						if err == nil {
-							sailing.CarFill = 100 - fill
-						}
-					}
-
-					if strings.Contains(reducedArray[4], "FULL") || strings.Contains(reducedArray[4], "Full") {
-						sailing.OversizeFill = 100
-					} else {
-						fill, err := strconv.Atoi(strings.Split(reducedArray[4], "%")[0])
-						if err == nil {
-							sailing.OversizeFill = 100 - fill
-						}
-					}
-				}
-			}
-
-			if strings.Contains(sailing.DepartureTime, "Delayed") {
-				sailing.DepartureTime = strings.TrimSpace(strings.Split(sailing.DepartureTime, "Delayed")[0])
-			}
-
-			route.Sailings = append(route.Sailings, sailing)
-		}
+				// Add salining to route
+				route.Sailings = append(route.Sailings, sailing)
+			})
+		})
 	})
 
 	sailingDuration := strings.ReplaceAll(document.Find("span:contains('Sailing Duration')").Text(), "\u00A0", " ")
@@ -225,7 +324,7 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 
 	sailingsJson, err := json.Marshal(route.Sailings)
 	if err != nil {
-		log.Error(err)
+		log.Fatal(err)
 	}
 
 	sqlStatement := `
@@ -249,7 +348,7 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 			capacity_routes.route_code = EXCLUDED.route_code`
 	_, err = db.Exec(sqlStatement, route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingDuration, sailingsJson)
 	if err != nil {
-		log.Error(err)
+		log.Fatal(err)
 	}
 }
 
@@ -273,20 +372,20 @@ func ScrapeNonCapacityRoutes() {
 			client := &http.Client{}
 			req, err := http.NewRequest("GET", link, nil)
 			if err != nil {
-				log.Error(err)
+				log.Fatal(err)
 			}
 
 			req.Header.Add("User-Agent", "Mozilla")
 			response, err := client.Do(req)
 			if err != nil {
-				log.Error(err)
+				log.Fatal(err)
 			}
 
 			defer response.Body.Close()
 
 			document, err := goquery.NewDocumentFromReader(response.Body)
 			if err != nil {
-				log.Error(err)
+				log.Fatal(err)
 			}
 
 			ScrapeNonCapacityRoute(document, departureTerminals[i], destinationTerminals[i][j])
@@ -331,7 +430,7 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode string,
 
 	sailingsJson, err := json.Marshal(route.Sailings)
 	if err != nil {
-		log.Error(err)
+		log.Fatal(err)
 	}
 
 	sailingDuration := ""
@@ -363,6 +462,6 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode string,
 			non_capacity_routes.route_code = EXCLUDED.route_code`
 	_, err = db.Exec(sqlStatement, route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingDuration, sailingsJson)
 	if err != nil {
-		log.Error(err)
+		log.Fatal(err)
 	}
 }
