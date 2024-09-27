@@ -1,0 +1,68 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "BC Ferries API V2 Non Capacity Routes Response Schema",
+    "description": "Schema for the BC Ferries API V2 response from https://bcferriesapi.ca/v2/noncapacity/",
+    "type": "object",
+    "properties": {
+      "routes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "routeCode": {
+              "type": "string"
+            },
+            "fromTerminalCode": {
+              "type": "string"
+            },
+            "toTerminalCode": {
+              "type": "string"
+            },
+            "sailingDuration": {
+              "type": "string"
+            },
+            "sailings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "time": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^(1[0-2]|0?[1-9]):[0-5][0-9] [ap]m$"
+                      }
+                    ]
+                  },
+                  "arrivalTime": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^(1[0-2]|0?[1-9]):[0-5][0-9] [ap]m$"
+                      }
+                    ]
+                  },
+                  "vesselName": {
+                    "type": "string"
+                  },
+                  "vesselStatus": {
+                    "type": "string"
+                  }
+                },
+                "required": ["time", "arrivalTime", "vesselName", "vesselStatus"]
+              }
+            }
+          },
+          "required": [
+            "routeCode",
+            "fromTerminalCode",
+            "toTerminalCode",
+            "sailingDuration",
+            "sailings"
+          ]
+        }
+      }
+    },
+    "required": ["routes"]
+  }
+  
