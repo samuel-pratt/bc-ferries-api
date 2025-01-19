@@ -48,6 +48,7 @@ This will:
 Visit these routes to test if setup was successful:
 
 http://localhost:8080/healthcheck/ (API health check)
+
 http://localhost:8080/v2/ (Main endpoint)
 
 ## API Reference
