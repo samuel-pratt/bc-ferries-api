@@ -13,7 +13,7 @@ Ensure the following are installed on your system:
 
 ## Setup
 
-### 2. Clone the repository
+### 1. Clone the repository
 
 ```
 git clone https://github.com/samuel-pratt/bc-ferries-api.git
