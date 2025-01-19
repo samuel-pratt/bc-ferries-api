@@ -2,23 +2,59 @@
 
 The BC Ferries API provides current data on BC Ferries sailings and schedules for all routes.
 
-## Running Locally
+---
 
-To run locally you must have a postgres database set up with the tables in `init.sql` included. Create a `.env` file from the `.ev.sample` and fill it with the database info.
+## Prerequisites
 
-Once that's set up just build the project with:
+Ensure the following are installed on your system:
+
+1. [Docker](https://www.docker.com/products/docker-desktop)
+2. [Docker Compose](https://docs.docker.com/compose/)
+3. [Go (1.19+)](https://go.dev/dl/) (optional for local development)
+
+---
+
+## Setup
+
+### 2. Clone the repository
 
 ```
-go build
+git clone https://github.com/samuel-pratt/bc-ferries-api.git
+cd bc-ferries-api
 ```
 
-And run it with:
+### 2. `.env` File
+
+Create a `.env` file in the project root from the `.env.sample`. Below is an example:
+
+```env
+# Database Configuration
+DB_USER=username
+DB_PASS=password
+DB_NAME=dbname
+DB_HOST=db
+DB_PORT=5432
+DB_SSL=disable
+```
+
+### 3. Build and start the container
 
 ```
-./bc-ferries-api
+docker-compose up --build
 ```
 
-And you're good to go!
+This will:
+
+- Start a PostgreSQL database service (db).
+- Build and run the Go application (api).
+
+Visit these routes to test if setup was successful:
+
+http://localhost:8080/healthcheck/ (API health check)
+http://localhost:8080/v2/ (Main endpoint)
+
+
+---
 
 ## API Reference
 
@@ -45,7 +81,7 @@ The root `/v2/` route provides data for both capacity and non-capacity sailings.
 
 ### V1
 
-This API uses the following route codes used by BC Ferries:
+The old version of this API uses the following route codes used by BC Ferries:
 
 - "TSA" -> Tsawwassen
 - "SWB" -> Swartz Bay
