@@ -2,8 +2,6 @@
 
 The BC Ferries API provides current data on BC Ferries sailings and schedules for all routes.
 
----
-
 ## Prerequisites
 
 Ensure the following are installed on your system:
@@ -12,7 +10,6 @@ Ensure the following are installed on your system:
 2. [Docker Compose](https://docs.docker.com/compose/)
 3. [Go (1.19+)](https://go.dev/dl/) (optional for local development)
 
----
 
 ## Setup
 
@@ -52,9 +49,6 @@ Visit these routes to test if setup was successful:
 
 http://localhost:8080/healthcheck/ (API health check)
 http://localhost:8080/v2/ (Main endpoint)
-
-
----
 
 ## API Reference
 
