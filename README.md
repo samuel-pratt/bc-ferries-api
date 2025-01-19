@@ -4,7 +4,7 @@ The BC Ferries API provides current data on BC Ferries sailings and schedules fo
 
 ## Running Locally
 
-To run locally you must have a postgres database set up with the tables in `db_setup.sql` included. Create a `.env` file from the `.ev.sample` and fill it with the database info.
+To run locally you must have a postgres database set up with the tables in `init.sql` included. Create a `.env` file from the `.ev.sample` and fill it with the database info.
 
 Once that's set up just build the project with:
 
