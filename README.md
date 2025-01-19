@@ -20,7 +20,7 @@ git clone https://github.com/samuel-pratt/bc-ferries-api.git
 cd bc-ferries-api
 ```
 
-### 2. `.env` File
+### 2. Create a `.env` file
 
 Create a `.env` file in the project root from the `.env.sample`. Below is an example:
 
