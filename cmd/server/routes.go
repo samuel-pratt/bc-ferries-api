@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/samuel-pratt/bc-ferries-api/cmd/db"
+	"github.com/samuel-pratt/bc-ferries-api/cmd/models"
 )
 
 /**************/
@@ -13,50 +15,12 @@ import (
 /**************/
 
 type AllDataResponse struct {
-	CapacityRoutes    []CapacityRoute    `json:"capacityRoutes"`
-	NonCapacityRoutes []NonCapacityRoute `json:"nonCapacityRoutes"`
+	CapacityRoutes    []models.CapacityRoute    `json:"capacityRoutes"`
+	NonCapacityRoutes []models.NonCapacityRoute `json:"nonCapacityRoutes"`
 }
 
 type CapacityResponse struct {
-	Routes []CapacityRoute `json:"routes"`
-}
-
-type CapacityRoute struct {
-	RouteCode        string            `json:"routeCode"`
-	FromTerminalCode string            `json:"fromTerminalCode"`
-	ToTerminalCode   string            `json:"toTerminalCode"`
-	SailingDuration  string            `json:"sailingDuration"`
-	Sailings         []CapacitySailing `json:"sailings"`
-}
-
-type CapacitySailing struct {
-	DepartureTime string `json:"time"`
-	ArrivalTime   string `json:"arrivalTime"`
-	SailingStatus string `json:"sailingStatus"`
-	Fill          int    `json:"fill"`
-	CarFill       int    `json:"carFill"`
-	OversizeFill  int    `json:"oversizeFill"`
-	VesselName    string `json:"vesselName"`
-	VesselStatus  string `json:"vesselStatus"`
-}
-
-type NonCapacityResponse struct {
-	Routes []NonCapacityRoute `json:"routes"`
-}
-
-type NonCapacityRoute struct {
-	RouteCode        string               `json:"routeCode"`
-	FromTerminalCode string               `json:"fromTerminalCode"`
-	ToTerminalCode   string               `json:"toTerminalCode"`
-	SailingDuration  string               `json:"sailingDuration"`
-	Sailings         []NonCapacitySailing `json:"sailings"`
-}
-
-type NonCapacitySailing struct {
-	DepartureTime string `json:"time"`
-	ArrivalTime   string `json:"arrivalTime"`
-	VesselName    string `json:"vesselName"`
-	VesselStatus  string `json:"vesselStatus"`
+	Routes []models.CapacityRoute `json:"routes"`
 }
 
 /*************/
@@ -74,9 +38,9 @@ type NonCapacitySailing struct {
  *
  * @return void
  */
-func CapacityAndNonCapacitySailingsEndpoint(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	capacityRoute := GetCapacitySailings()
-	nonCapacityRoute := GetNonCapacitySailings()
+func GetCapacityAndNonCapacitySailings(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	capacityRoute := db.GetCapacitySailings()
+	nonCapacityRoute := db.GetNonCapacitySailings()
 
 	response := AllDataResponse{
 		CapacityRoutes:    capacityRoute,
@@ -102,8 +66,8 @@ func CapacityAndNonCapacitySailingsEndpoint(w http.ResponseWriter, r *http.Reque
  *
  * @return void
  */
-func CapacitySailingsEndpoint(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	routes := GetCapacitySailings()
+func GetCapacitySailings(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	routes := db.GetCapacitySailings()
 
 	response := CapacityResponse{
 		Routes: routes,
@@ -135,10 +99,10 @@ func CapacitySailingsEndpoint(w http.ResponseWriter, r *http.Request, ps httprou
  *
  * @return void
  */
-func NonCapacitySailingsEndpoint(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	routes := GetNonCapacitySailings()
+func GetNonCapacitySailings(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	routes := db.GetNonCapacitySailings()
 
-	response := NonCapacityResponse{
+	response := models.NonCapacityResponse{
 		Routes: routes,
 	}
 
@@ -155,24 +119,8 @@ func NonCapacitySailingsEndpoint(w http.ResponseWriter, r *http.Request, ps http
 /**************/
 
 type Response struct {
-	Schedule  map[string]map[string]Route `json:"schedule"`
-	ScrapedAt time.Time                   `json:"scrapedAt"`
-}
-
-type Route struct {
-	SailingDuration string    `json:"sailingDuration"`
-	Sailings        []Sailing `json:"sailings"`
-}
-
-type Sailing struct {
-	DepartureTime string `json:"time"`
-	ArrivalTime   string `json:"arrivalTime"`
-	IsCancelled   bool   `json:"isCancelled"`
-	Fill          int    `json:"fill"`
-	CarFill       int    `json:"carFill"`
-	OversizeFill  int    `json:"oversizeFill"`
-	VesselName    string `json:"vesselName"`
-	VesselStatus  string `json:"vesselStatus"`
+	Schedule  map[string]map[string]models.Route `json:"schedule"`
+	ScrapedAt time.Time                          `json:"scrapedAt"`
 }
 
 /*************/
@@ -181,7 +129,7 @@ type Sailing struct {
 // V1 routes return data in a different format and only contain upcoming sailings for specific routes
 
 /*
- * AllSailingsEndpoint
+ * GetAllSailings
  *
  * Returns all sailing data
  *
@@ -191,9 +139,9 @@ type Sailing struct {
  *
  * @return void
  */
-func AllSailingsEndpoint(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	capacityRoute := GetCapacitySailings()
-	nonCapacityRoute := GetNonCapacitySailings()
+func GetAllSailings(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	capacityRoute := db.GetCapacitySailings()
+	nonCapacityRoute := db.GetNonCapacitySailings()
 
 	response := AllDataResponse{
 		CapacityRoutes:    capacityRoute,
@@ -208,7 +156,7 @@ func AllSailingsEndpoint(w http.ResponseWriter, r *http.Request, ps httprouter.P
 }
 
 /*
- * SailingsByDepartureTerminal
+ * GetSailingsByDepartureTerminal
  *
  * Returns sailing data for given departure
  *
@@ -218,10 +166,10 @@ func AllSailingsEndpoint(w http.ResponseWriter, r *http.Request, ps httprouter.P
  *
  * @return void
  */
-func SailingsByDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func GetSailingsByDepartureTerminal(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	departureTerminal := ps.ByName("departureTerminal")
-	capacityRoute := GetCapacitySailings()
-	nonCapacityRoute := GetNonCapacitySailings()
+	capacityRoute := db.GetCapacitySailings()
+	nonCapacityRoute := db.GetNonCapacitySailings()
 
 	allDataResponse := AllDataResponse{
 		CapacityRoutes:    capacityRoute,
@@ -236,7 +184,7 @@ func SailingsByDepartureTerminal(w http.ResponseWriter, r *http.Request, ps http
 }
 
 /*
- * SailingsByDepartureAndDestinationTerminals
+ * GetSailingsByDepartureAndDestinationTerminals
  *
  * Returns sailing data for given departure and destination terminal
  *
@@ -246,11 +194,11 @@ func SailingsByDepartureTerminal(w http.ResponseWriter, r *http.Request, ps http
  *
  * @return void
  */
-func SailingsByDepartureAndDestinationTerminals(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func GetSailingsByDepartureAndDestinationTerminals(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	departureTerminal := ps.ByName("departureTerminal")
 	destinationTerminal := ps.ByName("destinationTerminal")
-	capacityRoute := GetCapacitySailings()
-	nonCapacityRoute := GetNonCapacitySailings()
+	capacityRoute := db.GetCapacitySailings()
+	nonCapacityRoute := db.GetNonCapacitySailings()
 
 	allDataResponse := AllDataResponse{
 		CapacityRoutes:    capacityRoute,
@@ -268,6 +216,17 @@ func SailingsByDepartureAndDestinationTerminals(w http.ResponseWriter, r *http.R
 /* Other Routes */
 /****************/
 
+/*
+ * HealthCheck
+ *
+ * Returns a simple response indicating the server is running.
+ *
+ * @param http.ResponseWriter w
+ * @param *http.Request r
+ * @param httprouter.Params ps
+ *
+ * @return void
+ */
 func HealthCheck(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	jsonString, _ := json.Marshal("Server OK")
 
@@ -280,8 +239,20 @@ func HealthCheck(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 /* Helper Functions */
 /********************/
 
-func ConvertV1ResponseToV2Response(allData AllDataResponse) map[string]map[string]Route {
-	schedule := make(map[string]map[string]Route)
+/*
+ * ConvertV1ResponseToV2Response
+ *
+ * Converts the V2 API response format into the legacy V1 structure,
+ * organizing sailings by departure and destination terminals.
+ *
+ * Filters only allowed terminal pairs as defined by internal maps.
+ *
+ * @param AllDataResponse allData - the combined capacity and non-capacity data
+ *
+ * @return map[string]map[string]models.Route - nested route data
+ */
+func ConvertV1ResponseToV2Response(allData AllDataResponse) map[string]map[string]models.Route {
+	schedule := make(map[string]map[string]models.Route)
 
 	// Define the allowed terminal codes for CapacityRoutes and NonCapacityRoutes
 	capacityRoutesFilter := map[string][]string{
@@ -304,14 +275,14 @@ func ConvertV1ResponseToV2Response(allData AllDataResponse) map[string]map[strin
 
 		if allowedDestinations, ok := capacityRoutesFilter[fromTerminal]; ok {
 			if contains(allowedDestinations, toTerminal) {
-				route := Route{
+				route := models.Route{
 					SailingDuration: capRoute.SailingDuration,
-					Sailings:        []Sailing{},
+					Sailings:        []models.Sailing{},
 				}
 
 				for _, capSailing := range capRoute.Sailings {
 					if capSailing.SailingStatus == "future" {
-						route.Sailings = append(route.Sailings, Sailing{
+						route.Sailings = append(route.Sailings, models.Sailing{
 							DepartureTime: capSailing.DepartureTime,
 							ArrivalTime:   capSailing.ArrivalTime,
 							IsCancelled:   capSailing.SailingStatus == "Cancelled",
@@ -326,7 +297,7 @@ func ConvertV1ResponseToV2Response(allData AllDataResponse) map[string]map[strin
 
 				if len(route.Sailings) > 0 {
 					if _, ok := schedule[fromTerminal]; !ok {
-						schedule[fromTerminal] = make(map[string]Route)
+						schedule[fromTerminal] = make(map[string]models.Route)
 					}
 					schedule[fromTerminal][toTerminal] = route
 				}
@@ -340,13 +311,13 @@ func ConvertV1ResponseToV2Response(allData AllDataResponse) map[string]map[strin
 
 		if allowedDestinations, ok := nonCapacityRoutesFilter[fromTerminal]; ok {
 			if contains(allowedDestinations, toTerminal) {
-				route := Route{
+				route := models.Route{
 					SailingDuration: nonCapRoute.SailingDuration,
-					Sailings:        []Sailing{},
+					Sailings:        []models.Sailing{},
 				}
 
 				for _, nonCapSailing := range nonCapRoute.Sailings {
-					route.Sailings = append(route.Sailings, Sailing{
+					route.Sailings = append(route.Sailings, models.Sailing{
 						DepartureTime: nonCapSailing.DepartureTime,
 						ArrivalTime:   nonCapSailing.ArrivalTime,
 						IsCancelled:   false,
@@ -360,7 +331,7 @@ func ConvertV1ResponseToV2Response(allData AllDataResponse) map[string]map[strin
 
 				if len(route.Sailings) > 0 {
 					if _, ok := schedule[fromTerminal]; !ok {
-						schedule[fromTerminal] = make(map[string]Route)
+						schedule[fromTerminal] = make(map[string]models.Route)
 					}
 					schedule[fromTerminal][toTerminal] = route
 				}
@@ -371,6 +342,16 @@ func ConvertV1ResponseToV2Response(allData AllDataResponse) map[string]map[strin
 	return schedule
 }
 
+/*
+ * contains
+ *
+ * Utility function to check if a string slice contains a given string.
+ *
+ * @param []string s - the slice to search
+ * @param string str - the string to look for
+ *
+ * @return bool - true if str is found in s
+ */
 func contains(s []string, str string) bool {
 	for _, v := range s {
 		if v == str {
@@ -378,4 +359,32 @@ func contains(s []string, str string) bool {
 		}
 	}
 	return false
+}
+
+/*
+ * SetupRouter
+ *
+ * Initializes the HTTP router and registers all API endpoints.
+ * Also serves static files for not-found routes.
+ *
+ * @return *httprouter.Router - configured router instance
+ */
+func SetupRouter() *httprouter.Router {
+	router := httprouter.New()
+
+	// V2 Routes
+	router.GET("/v2/", GetCapacityAndNonCapacitySailings)
+	router.GET("/v2/capacity/", GetCapacitySailings)
+	router.GET("/v2/noncapacity/", GetNonCapacitySailings)
+
+	// V1 Routes
+	router.GET("/api/", GetAllSailings)
+	router.GET("/api/:departureTerminal/", GetSailingsByDepartureTerminal)
+	router.GET("/api/:departureTerminal/:destinationTerminal/", GetSailingsByDepartureAndDestinationTerminals)
+
+	router.GET("/healthcheck/", HealthCheck)
+
+	router.NotFound = http.FileServer(http.Dir("./static"))
+
+	return router
 }

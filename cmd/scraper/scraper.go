@@ -1,4 +1,4 @@
-package main
+package scraper
 
 import (
 	"encoding/json"
@@ -11,6 +11,10 @@ import (
 	"log"
 
 	"github.com/PuerkitoBio/goquery"
+
+	"github.com/samuel-pratt/bc-ferries-api/cmd/db"
+	"github.com/samuel-pratt/bc-ferries-api/cmd/models"
+	"github.com/samuel-pratt/bc-ferries-api/cmd/staticdata"
 )
 
 /*
@@ -42,16 +46,15 @@ func MakeScheduleLink(departure, destination string) string {
 }
 
 /*
- * ScrapeBCCapacityRoutes
+ * ScrapeCapacityRoutes
  *
- * Scrapes BC Ferries capacity routes
+ * Scrapes capacity routes
  *
  * @return void
  */
 func ScrapeCapacityRoutes() {
-	departureTerminals := GetCapacityDepartureTerminals()
-
-	destinationTerminals := GetCapacityDestinationTerminals()
+	departureTerminals := staticdata.GetCapacityDepartureTerminals()
+	destinationTerminals := staticdata.GetCapacityDestinationTerminals()
 
 	for i := 0; i < len(departureTerminals); i++ {
 		for j := 0; j < len(destinationTerminals[i]); j++ {
@@ -61,20 +64,23 @@ func ScrapeCapacityRoutes() {
 			client := &http.Client{}
 			req, err := http.NewRequest("GET", link, nil)
 			if err != nil {
-				log.Fatal(err)
+				log.Printf("ScrapeCapacityRoutes: failed to create request for %s: %v", link, err)
+				continue
 			}
 
 			req.Header.Add("User-Agent", "Mozilla")
 			response, err := client.Do(req)
 			if err != nil {
-				log.Fatal(err)
+				log.Printf("ScrapeCapacityRoutes: failed to fetch %s: %v", link, err)
+				continue
 			}
 
 			defer response.Body.Close()
 
 			document, err := goquery.NewDocumentFromReader(response.Body)
 			if err != nil {
-				log.Fatal(err)
+				log.Printf("ScrapeCapacityRoutes: failed to parse response from %s: %v", link, err)
+				continue
 			}
 
 			ScrapeCapacityRoute(document, departureTerminals[i], destinationTerminals[i][j])
@@ -85,7 +91,7 @@ func ScrapeCapacityRoutes() {
 /*
  * ScrapeCapacityRoute
  *
- * Scrapes BC Ferries capacity data for a given route
+ * Scrapes capacity data for a given route
  *
  * @param *goquery.Document document
  * @param string fromTerminalCode
@@ -94,20 +100,18 @@ func ScrapeCapacityRoutes() {
  * @return void
  */
 func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, toTerminalCode string) {
-	db := GetPostgresInstance()
-
-	route := CapacityRoute{
+	route := models.CapacityRoute{
 		RouteCode:        fromTerminalCode + toTerminalCode,
 		ToTerminalCode:   toTerminalCode,
 		FromTerminalCode: fromTerminalCode,
-		Sailings:         []CapacitySailing{},
+		Sailings:         []models.CapacitySailing{},
 	}
 
 	document.Find("table.detail-departure-table").Each(func(i int, table *goquery.Selection) {
 		table.Find("tbody").Each(func(j int, tbody *goquery.Selection) {
 			tbody.Find("tr.mobile-friendly-row").Each(func(k int, row *goquery.Selection) {
 				// Init sailing
-				sailing := CapacitySailing{}
+				sailing := models.CapacitySailing{}
 
 				row.Find("td").Each(func(l int, td *goquery.Selection) {
 					if strings.Contains(row.Text(), "Arrived") {
@@ -222,20 +226,23 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 										client := &http.Client{}
 										req, err := http.NewRequest("GET", link, nil)
 										if err != nil {
-											log.Fatal(err)
+											log.Printf("ScrapeCapacityRoute: failed to create details request for %s: %v", link, err)
+											return
 										}
 
 										req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
 										response, err := client.Do(req)
 										if err != nil {
-											log.Fatal(err)
+											log.Printf("ScrapeCapacityRoute: failed to fetch details from %s: %v", link, err)
+											return
 										}
 
 										defer response.Body.Close()
 
 										fillDocument, err := goquery.NewDocumentFromReader(response.Body)
 										if err != nil {
-											log.Fatal(err)
+											log.Printf("ScrapeCapacityRoute: failed to parse fill details from %s: %v", link, err)
+											return
 										}
 
 										// fmt.Println(fillDocument.Text())
@@ -324,7 +331,8 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 
 	sailingsJson, err := json.Marshal(route.Sailings)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("ScrapeCapacityRoute: failed to marshal sailings for route %s: %v", route.RouteCode, err)
+		return
 	}
 
 	sqlStatement := `
@@ -346,23 +354,23 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 			sailings = EXCLUDED.sailings
 		WHERE
 			capacity_routes.route_code = EXCLUDED.route_code`
-	_, err = db.Exec(sqlStatement, route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingDuration, sailingsJson)
+	_, err = db.Conn.Exec(sqlStatement, route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingDuration, sailingsJson)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("ScrapeCapacityRoute: failed to insert route %s: %v", route.RouteCode, err)
+		return
 	}
 }
 
 /*
- * ScrapeBCNonCapacityRoutes
+ * ScrapeNonCapacityRoutes
  *
- * Scrapes BC Ferries non-capacity routes
+ * Scrapes non-capacity routes
  *
  * @return void
  */
 func ScrapeNonCapacityRoutes() {
-	departureTerminals := GetNonCapacityDepartureTerminals()
-
-	destinationTerminals := GetNonCapacityDestinationTerminals()
+	departureTerminals := staticdata.GetNonCapacityDepartureTerminals()
+	destinationTerminals := staticdata.GetNonCapacityDestinationTerminals()
 
 	for i := 0; i < len(departureTerminals); i++ {
 		for j := 0; j < len(destinationTerminals[i]); j++ {
@@ -372,20 +380,23 @@ func ScrapeNonCapacityRoutes() {
 			client := &http.Client{}
 			req, err := http.NewRequest("GET", link, nil)
 			if err != nil {
-				log.Fatal(err)
+				log.Printf("ScrapeNonCapacityRoutes: failed to create request for %s: %v", link, err)
+				continue
 			}
 
 			req.Header.Add("User-Agent", "Mozilla")
 			response, err := client.Do(req)
 			if err != nil {
-				log.Fatal(err)
+				log.Printf("ScrapeNonCapacityRoutes: failed to fetch %s: %v", link, err)
+				continue
 			}
 
 			defer response.Body.Close()
 
 			document, err := goquery.NewDocumentFromReader(response.Body)
 			if err != nil {
-				log.Fatal(err)
+				log.Printf("ScrapeNonCapacityRoutes: failed to parse response from %s: %v", link, err)
+				continue
 			}
 
 			ScrapeNonCapacityRoute(document, departureTerminals[i], destinationTerminals[i][j])
@@ -396,7 +407,7 @@ func ScrapeNonCapacityRoutes() {
 /*
  * ScrapeNonCapacityRoute
  *
- * Scrapes BC Ferries schedule data for a given route
+ * Scrapes schedule data for a given route
  *
  * @param *goquery.Document document
  * @param string fromTerminalCode
@@ -405,17 +416,15 @@ func ScrapeNonCapacityRoutes() {
  * @return void
  */
 func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode string, toTerminalCode string) {
-	db := GetPostgresInstance()
-
-	route := NonCapacityRoute{
+	route := models.NonCapacityRoute{
 		RouteCode:        fromTerminalCode + toTerminalCode,
 		ToTerminalCode:   toTerminalCode,
 		FromTerminalCode: fromTerminalCode,
-		Sailings:         []NonCapacitySailing{},
+		Sailings:         []models.NonCapacitySailing{},
 	}
 
 	document.Find(".table-seasonal-schedule").First().Find("tbody").First().Find(".schedule-table-row").Each(func(index int, sailingData *goquery.Selection) {
-		sailing := NonCapacitySailing{}
+		sailing := models.NonCapacitySailing{}
 
 		sailingData.Find("td").Each(func(index int, sailingData *goquery.Selection) {
 			if index == 1 {
@@ -430,7 +439,8 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode string,
 
 	sailingsJson, err := json.Marshal(route.Sailings)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("ScrapeNonCapacityRoute: failed to marshal sailings for route %s: %v", route.RouteCode, err)
+		return
 	}
 
 	sailingDuration := ""
@@ -460,8 +470,9 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode string,
 			sailings = EXCLUDED.sailings 
 		WHERE 
 			non_capacity_routes.route_code = EXCLUDED.route_code`
-	_, err = db.Exec(sqlStatement, route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingDuration, sailingsJson)
+	_, err = db.Conn.Exec(sqlStatement, route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingDuration, sailingsJson)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("ScrapeNonCapacityRoute: failed to insert route %s: %v", route.RouteCode, err)
+		return
 	}
 }
