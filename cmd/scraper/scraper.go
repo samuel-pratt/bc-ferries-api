@@ -371,6 +371,9 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
  * @return void
  */
 func ScrapeNonCapacityRoutes() {
+	ctx, cancel := chromedp.NewContext(context.Background())
+	defer cancel()
+
 	departureTerminals := staticdata.GetNonCapacityDepartureTerminals()
 	destinationTerminals := staticdata.GetNonCapacityDestinationTerminals()
 
@@ -378,7 +381,7 @@ func ScrapeNonCapacityRoutes() {
 		for j := 0; j < len(destinationTerminals[i]); j++ {
 			link := MakeScheduleLink(departureTerminals[i], destinationTerminals[i][j])
 
-			html, err := fetchWithChromedp(link)
+			html, err := fetchWithChromedp(ctx, link)
 			if err != nil {
 				fmt.Printf("ScrapeBCNonCapacityRoutes: chromedp fetch failed for %s: %v\n", link, err)
 				continue
@@ -484,10 +487,7 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode string,
  * @return string - The full outer HTML of the rendered page
  * @return error - Any error encountered during navigation or retrieval
  */
-func fetchWithChromedp(url string) (string, error) {
-	ctx, cancel := chromedp.NewContext(context.Background())
-	defer cancel()
-
+func fetchWithChromedp(ctx context.Context, url string) (string, error) {
 	var html string
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
@@ -495,8 +495,5 @@ func fetchWithChromedp(url string) (string, error) {
 		chromedp.OuterHTML("html", &html),
 	)
 
-	if err != nil {
-		return "", err
-	}
-	return html, nil
+	return html, err
 }
