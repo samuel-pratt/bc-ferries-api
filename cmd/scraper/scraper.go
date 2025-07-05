@@ -1,6 +1,7 @@
 package scraper
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"log"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/chromedp/chromedp"
 
 	"github.com/samuel-pratt/bc-ferries-api/cmd/db"
 	"github.com/samuel-pratt/bc-ferries-api/cmd/models"
@@ -376,26 +378,15 @@ func ScrapeNonCapacityRoutes() {
 		for j := 0; j < len(destinationTerminals[i]); j++ {
 			link := MakeScheduleLink(departureTerminals[i], destinationTerminals[i][j])
 
-			// Make HTTP GET request
-			client := &http.Client{}
-			req, err := http.NewRequest("GET", link, nil)
+			html, err := fetchWithChromedp(link)
 			if err != nil {
-				log.Printf("ScrapeNonCapacityRoutes: failed to create request for %s: %v", link, err)
+				fmt.Printf("ScrapeBCNonCapacityRoutes: chromedp fetch failed for %s: %v\n", link, err)
 				continue
 			}
 
-			req.Header.Add("User-Agent", "Mozilla")
-			response, err := client.Do(req)
+			document, err := goquery.NewDocumentFromReader(strings.NewReader(html))
 			if err != nil {
-				log.Printf("ScrapeNonCapacityRoutes: failed to fetch %s: %v", link, err)
-				continue
-			}
-
-			defer response.Body.Close()
-
-			document, err := goquery.NewDocumentFromReader(response.Body)
-			if err != nil {
-				log.Printf("ScrapeNonCapacityRoutes: failed to parse response from %s: %v", link, err)
+				fmt.Printf("ScrapeBCNonCapacityRoutes: failed to parse HTML for %s: %v\n", link, err)
 				continue
 			}
 
@@ -475,4 +466,37 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode string,
 		log.Printf("ScrapeNonCapacityRoute: failed to insert route %s: %v", route.RouteCode, err)
 		return
 	}
+}
+
+/********************/
+/* Helper Functions */
+/********************/
+
+/*
+ * fetchWithChromedp
+ *
+ * Uses a headless Chrome browser to fetch and render the full HTML content of a given URL.
+ * This is used to bypass JavaScript-based protections like Queue-it by executing the page
+ * in a real browser environment.
+ *
+ * @param string url - The URL to navigate to
+ *
+ * @return string - The full outer HTML of the rendered page
+ * @return error - Any error encountered during navigation or retrieval
+ */
+func fetchWithChromedp(url string) (string, error) {
+	ctx, cancel := chromedp.NewContext(context.Background())
+	defer cancel()
+
+	var html string
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(url),
+		chromedp.WaitReady("body", chromedp.ByQuery),
+		chromedp.OuterHTML("html", &html),
+	)
+
+	if err != nil {
+		return "", err
+	}
+	return html, nil
 }

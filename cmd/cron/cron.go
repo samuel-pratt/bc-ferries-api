@@ -1,4 +1,4 @@
-package main
+package cron
 
 import (
 	"time"
@@ -13,7 +13,7 @@ import (
  * Initializes and starts scheduled background scraping tasks using gocron.
  *
  * - Scrapes capacity route data every 1 minute.
- * - Scrapes non-capacity route data every 1 hour.
+ * - Scrapes non-capacity route data every 4 hours.
  *
  * The scheduler runs asynchronously in the background.
  *
@@ -26,7 +26,7 @@ func SetupCron() {
 		scraper.ScrapeCapacityRoutes()
 	})
 
-	s.Every(1).Hour().Do(func() {
+	s.Every(4).Hour().Do(func() {
 		scraper.ScrapeNonCapacityRoutes()
 	})
 
