@@ -524,10 +524,83 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode, toTerm
 		return
 	}
 
-	clean := func(s string) string {
-		s = strings.ReplaceAll(s, "\u00a0", " ") // NBSP -> space
-		return strings.TrimSpace(s)
-	}
+    clean := func(s string) string {
+        s = strings.ReplaceAll(s, "\u00a0", " ") // NBSP -> space
+        return strings.TrimSpace(s)
+    }
+
+    // Parse a list of month/day mentions from a status string like
+    // "Only on Sep 14, 28 & Oct 12" or "Except on Oct 13".
+    // Returns a set keyed by "MM-DD" for quick lookup.
+    parseMentionedDates := func(note string, year int) map[string]struct{} {
+        res := make(map[string]struct{})
+        if note == "" {
+            return res
+        }
+        lower := strings.ToLower(note)
+
+        monthMap := map[string]time.Month{
+            "jan": time.January, "january": time.January,
+            "feb": time.February, "february": time.February,
+            "mar": time.March, "march": time.March,
+            "apr": time.April, "april": time.April,
+            "may": time.May,
+            "jun": time.June, "june": time.June,
+            "jul": time.July, "july": time.July,
+            "aug": time.August, "august": time.August,
+            "sep": time.September, "sept": time.September, "september": time.September,
+            "oct": time.October, "october": time.October,
+            "nov": time.November, "november": time.November,
+            "dec": time.December, "december": time.December,
+        }
+
+        // 1) Find explicit Month Day pairs
+        mdRe := regexp.MustCompile(`(?i)(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})`)
+        matches := mdRe.FindAllStringSubmatch(lower, -1)
+
+        for _, m := range matches {
+            monKey := m[1]
+            dayStr := m[2]
+            if mon, ok := monthMap[monKey]; ok {
+                if d, err := strconv.Atoi(dayStr); err == nil {
+                    key := fmt.Sprintf("%02d-%02d", int(mon), d)
+                    res[key] = struct{}{}
+                }
+            }
+        }
+
+        // 2) Handle shorthand days following a month (e.g., "Sep 14, 28 & Oct 12")
+        //    For each segment that starts with a month, capture trailing , <day> pieces until next month appears
+        segRe := regexp.MustCompile(`(?i)(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}([^a-z]*)`)
+        pos := 0
+        for {
+            loc := segRe.FindStringSubmatchIndex(lower[pos:])
+            if loc == nil {
+                break
+            }
+            // Extract month for this segment
+            seg := lower[pos+loc[0] : pos+loc[1]]
+            mon := mdRe.FindStringSubmatch(seg)
+            if len(mon) >= 3 {
+                monKey := mon[1]
+                if monVal, ok := monthMap[monKey]; ok {
+                    // After the first "Month DD", scan the tail for , DD patterns
+                    tail := seg[len(mon[0]):]
+                    ddRe := regexp.MustCompile(`(?i)[,&\s]+(\d{1,2})(?!\s*[ap]m)`) // avoid matching times
+                    ddMatches := ddRe.FindAllStringSubmatch(tail, -1)
+                    for _, dm := range ddMatches {
+                        if d, err := strconv.Atoi(dm[1]); err == nil {
+                            key := fmt.Sprintf("%02d-%02d", int(monVal), d)
+                            res[key] = struct{}{}
+                        }
+                    }
+                }
+            }
+            pos += loc[1]
+        }
+
+        return res
+    }
 
     // ---- Step 4: parse rows in the found <tbody>
     dayBody.Find("tr.schedule-table-row").Each(func(_ int, row *goquery.Selection) {
@@ -542,6 +615,7 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode, toTerm
 
         // Capture red/black status notes if present (e.g., Only on..., Except on..., Foot passengers only, Dangerous goods only)
         var statuses []string
+        var redNotes []string
         depCell.Find("p").Each(func(_ int, p *goquery.Selection) {
             txt := clean(p.Text())
             if txt == "" {
@@ -551,6 +625,9 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode, toTerm
             // Common classes include red-text italic-style or text-black
             if p.HasClass("red-text") || p.HasClass("text-black") {
                 statuses = append(statuses, txt)
+                if p.HasClass("red-text") {
+                    redNotes = append(redNotes, txt)
+                }
             }
         })
 
@@ -569,6 +646,33 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode, toTerm
         if re := regexp.MustCompile(`(?i)\b\d{1,2}:\d{2}\s*[ap]m\b`); re != nil {
             if m := re.FindString(arrRaw); m != "" {
                 arrTime = m
+            }
+        }
+
+        // Filter: drop dangerous goods only sailings outright
+        depLower := strings.ToLower(depCell.Text())
+        if strings.Contains(depLower, "dangerous goods only") || strings.Contains(depLower, "no passengers permitted") {
+            return
+        }
+
+        // Apply exception rules: "Only on <dates>" and "Except on <dates>"
+        // Build a combined note string from red notes
+        combinedRed := strings.ToLower(strings.Join(redNotes, "; "))
+        today := time.Now().In(loc)
+        todayKey := fmt.Sprintf("%02d-%02d", int(today.Month()), today.Day())
+
+        // If there is an "only on" note, include only if today is listed
+        if strings.Contains(combinedRed, "only on") {
+            dates := parseMentionedDates(combinedRed, today.Year())
+            if _, ok := dates[todayKey]; !ok {
+                return
+            }
+        }
+        // If there is an "except on" note, exclude if today is listed
+        if strings.Contains(combinedRed, "except on") {
+            dates := parseMentionedDates(combinedRed, today.Year())
+            if _, ok := dates[todayKey]; ok {
+                return
             }
         }
 
