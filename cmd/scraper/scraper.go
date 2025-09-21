@@ -586,7 +586,8 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode, toTerm
                 if monVal, ok := monthMap[monKey]; ok {
                     // After the first "Month DD", scan the tail for , DD patterns
                     tail := seg[len(mon[0]):]
-                    ddRe := regexp.MustCompile(`(?i)[,&\s]+(\d{1,2})(?!\s*[ap]m)`) // avoid matching times
+                    // Match bare days like ", 28" without unsupported lookaheads
+                    ddRe := regexp.MustCompile(`(?i)[,&\s]+(\d{1,2})\b`)
                     ddMatches := ddRe.FindAllStringSubmatch(tail, -1)
                     for _, dm := range ddMatches {
                         if d, err := strconv.Atoi(dm[1]); err == nil {
