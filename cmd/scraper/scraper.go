@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"log"
 
@@ -36,7 +37,8 @@ func MakeCurrentConditionsLink(departure, destination string) string {
 /*
  * MakeScheduleLink
  *
- * Makes a link to the schedule page for a given departure and destination
+ * Builds a link to the SEASONAL schedule page for a given departure and destination.
+ * Seasonal pages contain the weekly tables used by the non-capacity scraper.
  *
  * @param string departure
  * @param string destination
@@ -44,7 +46,7 @@ func MakeCurrentConditionsLink(departure, destination string) string {
  * @return string
  */
 func MakeScheduleLink(departure, destination string) string {
-	return "https://www.bcferries.com/routes-fares/schedules/daily/" + departure + "-" + destination
+    return "https://www.bcferries.com/routes-fares/schedules/seasonal/" + departure + "-" + destination
 }
 
 /*
@@ -111,16 +113,43 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 
 	document.Find("table.detail-departure-table").Each(func(i int, table *goquery.Selection) {
 		table.Find("tbody").Each(func(j int, tbody *goquery.Selection) {
-			tbody.Find("tr.mobile-friendly-row").Each(func(k int, row *goquery.Selection) {
-				// Init sailing
-				sailing := models.CapacitySailing{}
+                tbody.Find("tr.mobile-friendly-row").Each(func(k int, row *goquery.Selection) {
+                    // Init sailing
+                    sailing := models.CapacitySailing{}
 
-				row.Find("td").Each(func(l int, td *goquery.Selection) {
-					if strings.Contains(row.Text(), "Arrived") {
-						sailing.SailingStatus = "past"
+                    row.Find("td").Each(func(l int, td *goquery.Selection) {
+                        rowTextLower := strings.ToLower(row.Text())
 
-						if l == 0 {
-							timeString := strings.Join(strings.Fields(strings.TrimSpace(td.Find("p").Text())), " ")
+                        // Handle explicitly cancelled rows
+                        if strings.Contains(rowTextLower, "cancelled") {
+                            sailing.SailingStatus = "cancelled"
+
+                            if l == 0 {
+                                // Scheduled time and vessel
+                                timeString := strings.Join(strings.Fields(strings.TrimSpace(td.Text())), " ")
+                                re := regexp.MustCompile(`(?P<Time>\d{1,2}:\d{2} [ap]m)(?: \(Tomorrow\))? (?P<VesselName>.+)`)
+                                matches := re.FindStringSubmatch(strings.Join(strings.Fields(timeString), " "))
+                                if len(matches) >= 3 {
+                                    sailing.DepartureTime = matches[1]
+                                    sailing.VesselName = matches[2]
+                                }
+                            } else if l == 1 {
+                                // Capture reason if present under the red text block
+                                // Prefer the second <p> which often holds the reason
+                                reason := strings.TrimSpace(td.Find("div.text-red p").Eq(1).Text())
+                                if reason == "" {
+                                    // Fallback to the whole red block text
+                                    reason = strings.TrimSpace(td.Find("div.text-red").Text())
+                                }
+                                if reason != "" {
+                                    sailing.VesselStatus = reason
+                                }
+                            }
+                        } else if strings.Contains(row.Text(), "Arrived") {
+                            sailing.SailingStatus = "past"
+
+                            if l == 0 {
+                                timeString := strings.Join(strings.Fields(strings.TrimSpace(td.Find("p").Text())), " ")
 
 							re := regexp.MustCompile(`(?P<DepartureTime>\d{1,2}:\d{2} [ap]m) Departed (?P<ActualDepartureTime>\d{1,2}:\d{2} [ap]m) (?P<VesselName>.+)`)
 
@@ -154,8 +183,8 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 								sailing.ArrivalTime = arrivalTime
 							}
 						}
-					} else if strings.Contains(row.Text(), "ETA") || strings.Contains(row.Text(), "...") {
-						sailing.SailingStatus = "current"
+                        } else if strings.Contains(row.Text(), "ETA") || strings.Contains(row.Text(), "...") {
+                            sailing.SailingStatus = "current"
 
 						if l == 0 {
 							timeString := strings.Join(strings.Fields(strings.TrimSpace(td.Find("p").Text())), " ")
@@ -192,8 +221,8 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 								sailing.ArrivalTime = etaTime
 							}
 						}
-					} else if strings.Contains(row.Text(), "Details") || strings.Contains(row.Text(), "FULL") || strings.Contains(row.Text(), "Full") || strings.Contains(row.Text(), "%") {
-						sailing.SailingStatus = "future"
+                        } else if strings.Contains(row.Text(), "Details") || strings.Contains(row.Text(), "%") || strings.Contains(strings.ToLower(row.Text()), "full") {
+                            sailing.SailingStatus = "future"
 
 						if l == 0 {
 							// schedule time, vessel
@@ -219,8 +248,8 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 							// if word "Details" is in row, request from link, otherwise take percentage
 							fillDetailsString := td.Text()
 
-							if strings.Contains(fillDetailsString, "Details") {
-								td.Find("a.vehicle-info-link").Each(func(m int, s *goquery.Selection) {
+                                if strings.Contains(fillDetailsString, "Details") {
+                                    td.Find("a.vehicle-info-link").Each(func(m int, s *goquery.Selection) {
 									href, exists := s.Attr("href")
 									link := strings.ReplaceAll("https://www.bcferries.com"+href, " ", "%20")
 
@@ -249,41 +278,41 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 
 										// fmt.Println(fillDocument.Text())
 										fillDocument.Find("p.vehicle-icon-text").Each(func(o int, percentageText *goquery.Selection) {
-											if o == 0 {
-												fillPercentage := strings.TrimSpace(percentageText.Text())
+                                            if o == 0 {
+                                                fillPercentage := strings.TrimSpace(percentageText.Text())
 
-												if strings.Contains(fillPercentage, "Full") || strings.Contains(fillPercentage, "full") || strings.Contains(fillPercentage, "FULL") {
-													sailing.Fill = 100
-													sailing.CarFill = 100
-													sailing.OversizeFill = 100
-												} else {
-													fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
+                                                if strings.Contains(strings.ToLower(fillPercentage), "full") {
+                                                    sailing.Fill = 100
+                                                    sailing.CarFill = 100
+                                                    sailing.OversizeFill = 100
+                                                } else {
+                                                    fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
 													if err != nil {
 														// ... handle error
 													}
 
 													sailing.Fill = 100 - fillPercentageInt
 												}
-											} else if o == 1 {
-												fillPercentage := strings.TrimSpace(percentageText.Text())
+                                            } else if o == 1 {
+                                                fillPercentage := strings.TrimSpace(percentageText.Text())
 
-												if strings.Contains(fillPercentage, "Full") || strings.Contains(fillPercentage, "full") || strings.Contains(fillPercentage, "FULL") {
-													sailing.CarFill = 100
-												} else {
-													fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
+                                                if strings.Contains(strings.ToLower(fillPercentage), "full") {
+                                                    sailing.CarFill = 100
+                                                } else {
+                                                    fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
 													if err != nil {
 														// ... handle error
 													}
 
 													sailing.CarFill = 100 - fillPercentageInt
 												}
-											} else if o == 2 {
-												fillPercentage := strings.TrimSpace(percentageText.Text())
+                                            } else if o == 2 {
+                                                fillPercentage := strings.TrimSpace(percentageText.Text())
 
-												if strings.Contains(fillPercentage, "Full") || strings.Contains(fillPercentage, "full") || strings.Contains(fillPercentage, "FULL") {
-													sailing.OversizeFill = 100
-												} else {
-													fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
+                                                if strings.Contains(strings.ToLower(fillPercentage), "full") {
+                                                    sailing.OversizeFill = 100
+                                                } else {
+                                                    fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
 													if err != nil {
 														// ... handle error
 													}
@@ -296,12 +325,12 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 									}
 								})
 							} else {
-								if strings.Contains(fillDetailsString, "Full") {
-									sailing.Fill = 100
-									sailing.CarFill = 100
-									sailing.OversizeFill = 100
-								} else {
-									fillPercentage := strings.TrimSpace(td.Find("span.cc-vessel-percent-full").Text())
+                                if strings.Contains(strings.ToLower(fillDetailsString), "full") {
+                                    sailing.Fill = 100
+                                    sailing.CarFill = 100
+                                    sailing.OversizeFill = 100
+                                } else {
+                                    fillPercentage := strings.TrimSpace(td.Find("span.cc-vessel-percent-full").Text())
 
 									fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
 									if err != nil {
@@ -321,15 +350,20 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 		})
 	})
 
-	sailingDuration := strings.ReplaceAll(document.Find("span:contains('Sailing Duration')").Text(), "\u00A0", " ")
-
-	sailingDuration = strings.ReplaceAll(sailingDuration, "Sailing duration:", "")
-
-	if len(strings.TrimSpace(sailingDuration)) == 0 {
-		sailingDuration = ""
-	} else {
-		sailingDuration = strings.TrimSpace(sailingDuration)
-	}
+    // Try to find sailing duration text in a case-insensitive way
+    sailingDuration := ""
+    document.Find("span").Each(func(_ int, s *goquery.Selection) {
+        if sailingDuration != "" {
+            return
+        }
+        txt := strings.ReplaceAll(s.Text(), "\u00A0", " ")
+        if strings.Contains(strings.ToLower(txt), "sailing duration:") {
+            sailingDuration = txt
+        }
+    })
+    sailingDuration = strings.ReplaceAll(sailingDuration, "Sailing duration:", "")
+    sailingDuration = strings.ReplaceAll(sailingDuration, "sailing duration:", "")
+    sailingDuration = strings.TrimSpace(sailingDuration)
 
 	sailingsJson, err := json.Marshal(route.Sailings)
 	if err != nil {
@@ -409,41 +443,162 @@ func ScrapeNonCapacityRoutes() {
  *
  * @return void
  */
-func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode string, toTerminalCode string) {
-	route := models.NonCapacityRoute{
-		RouteCode:        fromTerminalCode + toTerminalCode,
-		ToTerminalCode:   toTerminalCode,
-		FromTerminalCode: fromTerminalCode,
-		Sailings:         []models.NonCapacitySailing{},
-	}
-
-	document.Find(".table-seasonal-schedule").First().Find("tbody").First().Find(".schedule-table-row").Each(func(index int, sailingData *goquery.Selection) {
-		sailing := models.NonCapacitySailing{}
-
-		sailingData.Find("td").Each(func(index int, sailingData *goquery.Selection) {
-			if index == 1 {
-				sailing.DepartureTime = strings.TrimSpace(sailingData.Text())
-			} else if index == 2 {
-				sailing.ArrivalTime = strings.TrimSpace(sailingData.Text())
-			}
-		})
-
-		route.Sailings = append(route.Sailings, sailing)
-	})
-
-	sailingsJson, err := json.Marshal(route.Sailings)
+func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode, toTerminalCode string) {
+	loc, err := time.LoadLocation("America/Vancouver")
 	if err != nil {
-		log.Printf("ScrapeNonCapacityRoute: failed to marshal sailings for route %s: %v", route.RouteCode, err)
+		log.Printf("ScrapeNonCapacityRoute: failed to load PT location: %v", err)
 		return
 	}
 
-	sailingDuration := ""
+	normalizeDay := func(s string) string {
+		s = strings.TrimSpace(strings.ToUpper(s))
+		// Treat trailing "S" as optional: MONDAY == MONDAYS
+		if strings.HasSuffix(s, "S") {
+			s = strings.TrimSuffix(s, "S")
+		}
+		return s
+	}
+	todayNorm := normalizeDay(time.Now().In(loc).Weekday().String()) // e.g. "MONDAY"
 
-	document.Find("table#dailyScheduleTableOnward").Find("tbody").Find("tr").First().Find("td").Each(func(index int, td *goquery.Selection) {
-		if index == 3 {
-			sailingDuration = strings.TrimSpace(td.Text())
+	route := models.NonCapacityRoute{
+		RouteCode:        fromTerminalCode + toTerminalCode,
+		FromTerminalCode: fromTerminalCode,
+		ToTerminalCode:   toTerminalCode,
+		Sailings:         []models.NonCapacitySailing{},
+	}
+
+    // ---- Step 1: find the seasonal schedule table that contains weekday theads
+    var scheduleTable *goquery.Selection
+    document.Find("table.table-seasonal-schedule").Each(func(_ int, t *goquery.Selection) {
+        if scheduleTable != nil {
+            return
+        }
+        // Heuristic: a real schedule table has thead rows with day labels
+        if t.Find("thead tr[data-schedule-day], thead [data-schedule-day], thead h4, thead b").Length() > 0 {
+            scheduleTable = t
+        }
+    })
+    // Fallback to the historical assumption (2nd table) if heuristic fails
+    if scheduleTable == nil {
+        scheduleTable = document.Find("table.table-seasonal-schedule").Eq(1)
+    }
+    if scheduleTable == nil || scheduleTable.Length() == 0 {
+        log.Printf("ScrapeNonCapacityRoute: seasonal schedule table not found")
+        return
+    }
+
+	// ---- Step 2: find the <thead> whose day matches today (MONDAY vs MONDAYS, any case)
+    var dayBody *goquery.Selection
+    scheduleTable.Find("thead").Each(func(_ int, thead *goquery.Selection) {
+		if dayBody != nil {
+			return
+		}
+
+		// Prefer the attribute if present.
+		dayAttr := thead.Find("tr").First().AttrOr("data-schedule-day", "")
+		dayAttrNorm := normalizeDay(dayAttr)
+
+		match := (dayAttrNorm != "" && dayAttrNorm == todayNorm)
+		if !match {
+			// Fallback: try visible text inside thead (e.g., MONDAY Depart)
+			txt := thead.Find("h4, b, th").First().Text()
+			txtNorm := normalizeDay(txt)
+			// If the text contains the weekday token (e.g., "MONDAY DEPART"), accept it.
+			match = (txtNorm == todayNorm) || strings.Contains(txtNorm, todayNorm)
+		}
+
+		if match {
+			// ---- Step 3: go to the NEXT sibling under the table; skip to the first <tbody>
+			tb := thead.Next()
+			for tb.Length() > 0 && goquery.NodeName(tb) != "tbody" {
+				tb = tb.Next()
+			}
+			if tb.Length() > 0 && goquery.NodeName(tb) == "tbody" {
+				dayBody = tb
+			}
 		}
 	})
+
+	if dayBody == nil {
+		log.Printf("ScrapeNonCapacityRoute: no tbody found for today (%s) in second table", todayNorm)
+		return
+	}
+
+	clean := func(s string) string {
+		s = strings.ReplaceAll(s, "\u00a0", " ") // NBSP -> space
+		return strings.TrimSpace(s)
+	}
+
+    // ---- Step 4: parse rows in the found <tbody>
+    dayBody.Find("tr.schedule-table-row").Each(func(_ int, row *goquery.Selection) {
+        tds := row.Find("td")
+        if tds.Length() < 3 {
+            return
+        }
+
+        // Extract clean departure time (first time token) and any status notes
+        depCell := tds.Eq(1)
+        depRaw := clean(depCell.Text())
+
+        // Capture red/black status notes if present (e.g., Only on..., Except on..., Foot passengers only, Dangerous goods only)
+        var statuses []string
+        depCell.Find("p").Each(func(_ int, p *goquery.Selection) {
+            txt := clean(p.Text())
+            if txt == "" {
+                return
+            }
+            // Only keep informative notes, skip if it's just whitespace
+            // Common classes include red-text italic-style or text-black
+            if p.HasClass("red-text") || p.HasClass("text-black") {
+                statuses = append(statuses, txt)
+            }
+        })
+
+        // Extract the first time-like token from the departure cell
+        depTime := depRaw
+        if re := regexp.MustCompile(`(?i)\b\d{1,2}:\d{2}\s*[ap]m\b`); re != nil {
+            if m := re.FindString(depRaw); m != "" {
+                depTime = m
+            }
+        }
+
+        // Extract clean arrival time (first time token)
+        arrCell := tds.Eq(2)
+        arrRaw := clean(arrCell.Text())
+        arrTime := arrRaw
+        if re := regexp.MustCompile(`(?i)\b\d{1,2}:\d{2}\s*[ap]m\b`); re != nil {
+            if m := re.FindString(arrRaw); m != "" {
+                arrTime = m
+            }
+        }
+
+        s := models.NonCapacitySailing{
+            DepartureTime: depTime,
+            ArrivalTime:   arrTime,
+        }
+        if len(statuses) > 0 {
+            s.VesselStatus = strings.Join(statuses, " | ")
+        }
+
+        if s.DepartureTime != "" || s.ArrivalTime != "" {
+            route.Sailings = append(route.Sailings, s)
+        }
+    })
+
+	// Optional: route-level duration (from the first row's 4th cell, if present)
+	sailingDuration := ""
+	if firstRow := dayBody.Find("tr.schedule-table-row").First(); firstRow.Length() > 0 {
+		if cell := firstRow.Find("td").Eq(3); cell.Length() > 0 {
+			sailingDuration = clean(cell.Text())
+		}
+	}
+
+	// ---- Step 5: save
+	sailingsJSON, err := json.Marshal(route.Sailings)
+	if err != nil {
+		log.Printf("ScrapeNonCapacityRoute: marshal error for %s: %v", route.RouteCode, err)
+		return
+	}
 
 	sqlStatement := `
 		INSERT INTO non_capacity_routes (
@@ -453,20 +608,18 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode string,
 			sailing_duration,
 			sailings
 		) 
-		VALUES 
-			($1, $2, $3, $4, $5) ON CONFLICT (route_code) DO 
-		UPDATE 
-		SET 
-			route_code = EXCLUDED.route_code, 
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (route_code) DO UPDATE SET
 			from_terminal_code = EXCLUDED.from_terminal_code, 
 			to_terminal_code = EXCLUDED.to_terminal_code,
 			sailing_duration = EXCLUDED.sailing_duration,
 			sailings = EXCLUDED.sailings 
-		WHERE 
-			non_capacity_routes.route_code = EXCLUDED.route_code`
-	_, err = db.Conn.Exec(sqlStatement, route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingDuration, sailingsJson)
+	`
+	_, err = db.Conn.Exec(sqlStatement,
+		route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingDuration, sailingsJSON,
+	)
 	if err != nil {
-		log.Printf("ScrapeNonCapacityRoute: failed to insert route %s: %v", route.RouteCode, err)
+		log.Printf("ScrapeNonCapacityRoute: DB insert/update failed for %s: %v", route.RouteCode, err)
 		return
 	}
 }

@@ -48,7 +48,7 @@ func GetCapacityDestinationTerminals() [][]string {
  * @return []string
  */
 func GetNonCapacityDepartureTerminals() []string {
-	departureTerminals := [45]string{
+	departureTerminals := [46]string{
 		"TSA", "HSB", "SWB", "NAN", "DUK",
 		"NAH", "CMX", "PPH", "BTW", "BKY",
 		"CAM", "CHM", "CFT", "MIL", "MCN",
@@ -57,7 +57,7 @@ func GetNonCapacityDepartureTerminals() []string {
 		"PEN", "PLH", "VES", "FUL", "THT",
 		"ALR", "DNM", "DNE", "HRN", "SOI",
 		"HRB", "QDR", "BEC", "PBB", "POF",
-		"SHW", "KLE", "PPR", "PSK", "ALF",
+		"SHW", "KLE", "PPR", "PSK", "ALF", "BOW",
 	}
 
 	return departureTerminals[:]
@@ -71,7 +71,7 @@ func GetNonCapacityDepartureTerminals() []string {
  * @return [][]string
  */
 func GetNonCapacityDestinationTerminals() [][]string {
-	destinationTerminals := [45][]string{
+	destinationTerminals := [46][]string{
 		{"PSB", "PVB", "DUK", "POB", "PLH", "PST", "SWB"},
 		{"BOW", "NAN", "LNG"},
 		{"PSB", "PVB", "POB", "FUL", "PST", "TSA", "PSB", "PVB", "POB", "FUL", "PST"},
@@ -117,6 +117,7 @@ func GetNonCapacityDestinationTerminals() [][]string {
 		{"PBB", "PSK", "KLE", "PPH", "PSK"},
 		{"ALF", "PPR"},
 		{"PSK"},
+		{"HSB"},
 	}
 
 	return destinationTerminals[:]
