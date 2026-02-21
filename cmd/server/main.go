@@ -20,7 +20,7 @@ func main() {
 	cron.SetupCron()
 
 	if config.ServerPort == "" {
-		config.ServerPort = "8080"
+		config.ServerPort = "8081"
 		fmt.Println("INFO: No PORT environment variable detected, defaulting to " + config.ServerPort)
 	}
 

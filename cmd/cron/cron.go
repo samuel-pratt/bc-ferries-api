@@ -22,9 +22,9 @@ import (
 func SetupCron() {
 	s := gocron.NewScheduler(time.UTC)
 
-	s.Every(1).Minute().Do(func() {
-		scraper.ScrapeCapacityRoutes()
-	})
+	// s.Every(1).Minute().Do(func() {
+	// 	scraper.ScrapeCapacityRoutes()
+	// })
 
 	s.Every(4).Hour().Do(func() {
 		scraper.ScrapeNonCapacityRoutes()
