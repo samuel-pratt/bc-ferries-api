@@ -71,6 +71,9 @@ func MakeSeasonalScheduleLink(departure, destination string) string {
  * @return void
  */
 func ScrapeCapacityRoutes() {
+	ctx, cancel := chromedp.NewContext(context.Background())
+	defer cancel()
+
 	departureTerminals := staticdata.GetCapacityDepartureTerminals()
 	destinationTerminals := staticdata.GetCapacityDestinationTerminals()
 
@@ -101,6 +104,20 @@ func ScrapeCapacityRoutes() {
 				continue
 			}
 
+			// Fallback for JS/challenge pages where static HTTP does not include departure rows.
+			if document.Find("table.detail-departure-table tr.mobile-friendly-row").Length() == 0 {
+				html, chromeErr := fetchWithChromedp(ctx, link)
+				if chromeErr != nil {
+					log.Printf("ScrapeCapacityRoutes: chromedp fallback failed for %s: %v", link, chromeErr)
+					continue
+				}
+				document, err = goquery.NewDocumentFromReader(strings.NewReader(html))
+				if err != nil {
+					log.Printf("ScrapeCapacityRoutes: failed to parse chromedp HTML for %s: %v", link, err)
+					continue
+				}
+			}
+
 			ScrapeCapacityRoute(document, departureTerminals[i], destinationTerminals[i][j])
 		}
 	}
@@ -118,6 +135,19 @@ func ScrapeCapacityRoutes() {
  * @return void
  */
 func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, toTerminalCode string) {
+	percentRe := regexp.MustCompile(`(\d{1,3})\s*%`)
+	parsePercent := func(s string) (int, bool) {
+		m := percentRe.FindStringSubmatch(s)
+		if len(m) < 2 {
+			return 0, false
+		}
+		v, err := strconv.Atoi(m[1])
+		if err != nil {
+			return 0, false
+		}
+		return v, true
+	}
+
 	route := models.CapacityRoute{
 		RouteCode:        fromTerminalCode + toTerminalCode,
 		ToTerminalCode:   toTerminalCode,
@@ -159,7 +189,7 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 								sailing.VesselStatus = reason
 							}
 						}
-					} else if strings.Contains(row.Text(), "Arrived") {
+					} else if strings.Contains(rowTextLower, "arrived:") {
 						sailing.SailingStatus = "past"
 
 						if l == 0 {
@@ -197,7 +227,7 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 								sailing.ArrivalTime = arrivalTime
 							}
 						}
-					} else if strings.Contains(row.Text(), "ETA") || strings.Contains(row.Text(), "...") {
+					} else if strings.Contains(rowTextLower, "eta") || strings.Contains(rowTextLower, "...") {
 						sailing.SailingStatus = "current"
 
 						if l == 0 {
@@ -235,7 +265,7 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 								sailing.ArrivalTime = etaTime
 							}
 						}
-					} else if strings.Contains(row.Text(), "Details") || strings.Contains(row.Text(), "%") || strings.Contains(strings.ToLower(row.Text()), "full") {
+					} else if strings.Contains(rowTextLower, "details") || strings.Contains(rowTextLower, "%") || strings.Contains(rowTextLower, "full") {
 						sailing.SailingStatus = "future"
 
 						if l == 0 {
@@ -258,11 +288,21 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 								sailing.VesselName = vesselName
 							}
 						} else if l == 1 {
-							// details link
-							// if word "Details" is in row, request from link, otherwise take percentage
-							fillDetailsString := td.Text()
+							// Prefer the visible fill % on current conditions as a baseline;
+							// use details page (if available) to enrich car/oversize values.
+							fillDetailsString := strings.ToLower(strings.TrimSpace(td.Text()))
+							if strings.Contains(fillDetailsString, "full") {
+								sailing.Fill = 100
+								sailing.CarFill = 100
+								sailing.OversizeFill = 100
+							} else {
+								fillPercentage := strings.TrimSpace(td.Find("span.cc-vessel-percent-full").First().Text())
+								if p, ok := parsePercent(fillPercentage); ok {
+									sailing.Fill = 100 - p
+								}
+							}
 
-							if strings.Contains(fillDetailsString, "Details") {
+							if strings.Contains(fillDetailsString, "details") {
 								td.Find("a.vehicle-info-link").Each(func(m int, s *goquery.Selection) {
 									href, exists := s.Attr("href")
 									link := strings.ReplaceAll("https://www.bcferries.com"+href, " ", "%20")
@@ -299,12 +339,7 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 													sailing.Fill = 100
 													sailing.CarFill = 100
 													sailing.OversizeFill = 100
-												} else {
-													fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
-													if err != nil {
-														// ... handle error
-													}
-
+												} else if fillPercentageInt, ok := parsePercent(fillPercentage); ok {
 													sailing.Fill = 100 - fillPercentageInt
 												}
 											} else if o == 1 {
@@ -312,12 +347,7 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 
 												if strings.Contains(strings.ToLower(fillPercentage), "full") {
 													sailing.CarFill = 100
-												} else {
-													fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
-													if err != nil {
-														// ... handle error
-													}
-
+												} else if fillPercentageInt, ok := parsePercent(fillPercentage); ok {
 													sailing.CarFill = 100 - fillPercentageInt
 												}
 											} else if o == 2 {
@@ -325,12 +355,7 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 
 												if strings.Contains(strings.ToLower(fillPercentage), "full") {
 													sailing.OversizeFill = 100
-												} else {
-													fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
-													if err != nil {
-														// ... handle error
-													}
-
+												} else if fillPercentageInt, ok := parsePercent(fillPercentage); ok {
 													sailing.OversizeFill = 100 - fillPercentageInt
 												}
 											}
@@ -338,28 +363,15 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 
 									}
 								})
-							} else {
-								if strings.Contains(strings.ToLower(fillDetailsString), "full") {
-									sailing.Fill = 100
-									sailing.CarFill = 100
-									sailing.OversizeFill = 100
-								} else {
-									fillPercentage := strings.TrimSpace(td.Find("span.cc-vessel-percent-full").Text())
-
-									fillPercentageInt, err := strconv.Atoi(strings.ReplaceAll(fillPercentage, "%", ""))
-									if err != nil {
-										// ... handle error
-									}
-
-									sailing.Fill = 100 - fillPercentageInt
-								}
 							}
 						}
 					}
 				})
 
-				// Add salining to route
-				route.Sailings = append(route.Sailings, sailing)
+				// Add sailing only when a row time was parsed.
+				if sailing.DepartureTime != "" {
+					route.Sailings = append(route.Sailings, sailing)
+				}
 			})
 		})
 	})
