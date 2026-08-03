@@ -1,8 +1,6 @@
 module github.com/samuel-pratt/bc-ferries-api
 
-go 1.23
-
-toolchain go1.23.10
+go 1.25.0
 
 require (
 	github.com/PuerkitoBio/goquery v1.8.0
@@ -23,7 +21,7 @@ require (
 	github.com/gobwas/ws v1.4.0 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
-	golang.org/x/net v0.19.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 )
