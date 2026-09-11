@@ -1,14 +1,14 @@
-version: "3.8"
-
 services:
     db:
-        image: postgres:13
+        image: ${POSTGRES_IMAGE:?Set POSTGRES_IMAGE to the existing database major version; see DEPLOYMENT.md}
+        restart: unless-stopped
+        logging:
+            driver: local
+            options: {max-size: "10m", max-file: "3"}
         environment:
-            - POSTGRES_USER=${DB_USER}
-            - POSTGRES_PASSWORD=${DB_PASS}
+            - POSTGRES_USER=${DB_ADMIN_USER:-${DB_USER}}
+            - POSTGRES_PASSWORD=${DB_ADMIN_PASS:-${DB_PASS}}
             - POSTGRES_DB=${DB_NAME}
-        ports:
-            - "5432:5432"
         volumes:
             - db_data:/var/lib/postgresql/data
             - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -16,7 +16,7 @@ services:
             test:
                 [
                     "CMD-SHELL",
-                    "pg_isready -U ${DB_USER} -d ${DB_NAME} -h localhost",
+                    "pg_isready -U ${DB_ADMIN_USER:-${DB_USER}} -d ${DB_NAME} -h localhost",
                 ]
             interval: 10s
             timeout: 5s
@@ -24,8 +24,17 @@ services:
 
     api:
         build: .
+        init: true
+        stop_grace_period: 30s
+        mem_limit: 1536m
+        security_opt: ["no-new-privileges:true"]
+        cap_drop: ["ALL"]
+        restart: unless-stopped
+        logging:
+            driver: local
+            options: {max-size: "10m", max-file: "3"}
         ports:
-            - "8081:8081"
+            - "127.0.0.1:${API_PORT:-8081}:${PORT:-8081}"
         depends_on:
             db:
                 condition: service_healthy
@@ -36,6 +45,15 @@ services:
             - DB_HOST=${DB_HOST}
             - DB_PORT=${DB_PORT}
             - DB_SSL=${DB_SSL}
+            - PORT=${PORT:-8081}
+        healthcheck:
+            test: ["CMD-SHELL", "wget -qO- http://localhost:${PORT:-8081}/healthcheck/ >/dev/null"]
+            interval: 15s
+            timeout: 5s
+            retries: 5
+            start_period: 30s
 
 volumes:
     db_data:
+        external: true
+        name: ${BC_DB_VOLUME:?Set BC_DB_VOLUME to the exact existing or prepared volume}

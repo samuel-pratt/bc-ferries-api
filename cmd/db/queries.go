@@ -1,8 +1,10 @@
 package db
 
 import (
+	"context"
 	"encoding/json"
 	"log"
+	"time"
 
 	"github.com/samuel-pratt/bc-ferries-api/cmd/models"
 )
@@ -18,11 +20,13 @@ import (
  * @return []models.CapacityRoute - a slice of capacity routes with their sailings
  */
 func GetCapacitySailings() []models.CapacityRoute {
-	var routes []models.CapacityRoute
+	routes := []models.CapacityRoute{}
 
-	sqlStatement := `SELECT * FROM capacity_routes`
+	sqlStatement := `SELECT r.route_code,r.from_terminal_code,r.to_terminal_code,r.sailing_duration,r.sailings,COALESCE(o.payload,'{}') FROM capacity_routes r LEFT JOIN route_operational_data o ON o.kind='capacity' AND o.route_code=r.route_code ORDER BY r.route_code`
 
-	rows, err := Conn.Query(sqlStatement)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	rows, err := Conn.QueryContext(ctx, sqlStatement)
 	if err != nil {
 		log.Printf("GetCapacitySailings: query failed: %v", err)
 		return routes
@@ -32,25 +36,33 @@ func GetCapacitySailings() []models.CapacityRoute {
 	for rows.Next() {
 		var route models.CapacityRoute
 		var sailings []uint8
+		var operationalData []uint8
 
-		err := rows.Scan(&route.RouteCode, &route.FromTerminalCode, &route.ToTerminalCode, &route.SailingDuration, &sailings)
+		err := rows.Scan(&route.RouteCode, &route.FromTerminalCode, &route.ToTerminalCode, &route.SailingDuration, &sailings, &operationalData)
 		if err != nil {
 			log.Printf("GetCapacitySailings: row scan failed: %v", err)
-			continue
+			return nil
 		}
 
 		var content []models.CapacitySailing
 		if err := json.Unmarshal(sailings, &content); err != nil {
 			log.Printf("GetCapacitySailings: JSON unmarshal failed: %v", err)
-			continue
+			return nil
 		}
 
 		route.Sailings = content
+		var operational models.RouteOperationalData
+		if len(operationalData) > 0 && json.Unmarshal(operationalData, &operational) == nil {
+			route.Notices = operational.Notices
+			route.Terminal = operational.Terminal
+			route.ObservedAt = operational.ObservedAt
+		}
 		routes = append(routes, route)
 	}
 
 	if err := rows.Err(); err != nil {
 		log.Printf("GetCapacitySailings: row iteration error: %v", err)
+		return nil
 	}
 
 	return routes
@@ -67,11 +79,13 @@ func GetCapacitySailings() []models.CapacityRoute {
  * @return []models.NonCapacityRoute - a slice of non-capacity routes with their sailings
  */
 func GetNonCapacitySailings() []models.NonCapacityRoute {
-	var routes []models.NonCapacityRoute
+	routes := []models.NonCapacityRoute{}
 
-	sqlStatement := `SELECT * FROM non_capacity_routes`
+	sqlStatement := `SELECT r.route_code,r.from_terminal_code,r.to_terminal_code,r.sailing_duration,r.sailings,COALESCE(o.payload,'{}') FROM non_capacity_routes r LEFT JOIN route_operational_data o ON o.kind='noncapacity' AND o.route_code=r.route_code ORDER BY r.route_code`
 
-	rows, err := Conn.Query(sqlStatement)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	rows, err := Conn.QueryContext(ctx, sqlStatement)
 	if err != nil {
 		log.Printf("GetNonCapacitySailings: query failed: %v", err)
 		return routes
@@ -81,25 +95,33 @@ func GetNonCapacitySailings() []models.NonCapacityRoute {
 	for rows.Next() {
 		var route models.NonCapacityRoute
 		var sailings []uint8
+		var operationalData []uint8
 
-		err := rows.Scan(&route.RouteCode, &route.FromTerminalCode, &route.ToTerminalCode, &route.SailingDuration, &sailings)
+		err := rows.Scan(&route.RouteCode, &route.FromTerminalCode, &route.ToTerminalCode, &route.SailingDuration, &sailings, &operationalData)
 		if err != nil {
 			log.Printf("GetNonCapacitySailings: row scan failed: %v", err)
-			continue
+			return nil
 		}
 
 		var content []models.NonCapacitySailing
 		if err := json.Unmarshal(sailings, &content); err != nil {
 			log.Printf("GetNonCapacitySailings: JSON unmarshal failed: %v", err)
-			continue
+			return nil
 		}
 
 		route.Sailings = content
+		var operational models.RouteOperationalData
+		if len(operationalData) > 0 && json.Unmarshal(operationalData, &operational) == nil {
+			route.Notices = operational.Notices
+			route.Terminal = operational.Terminal
+			route.ObservedAt = operational.ObservedAt
+		}
 		routes = append(routes, route)
 	}
 
 	if err := rows.Err(); err != nil {
 		log.Printf("GetNonCapacitySailings: row iteration error: %v", err)
+		return nil
 	}
 
 	return routes

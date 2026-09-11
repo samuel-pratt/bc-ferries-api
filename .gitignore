@@ -11,3 +11,7 @@ sailings.json
 
 # vscode
 .vscode
+backups/
+*.dump
+.env.*
+!.env.example

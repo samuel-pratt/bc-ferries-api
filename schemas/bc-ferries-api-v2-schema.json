@@ -1,158 +1,391 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "BC Ferries API V2 Response Schema",
-    "description": "Schema for the BC Ferries API V2 response from https://bcferriesapi.ca/v2/",
-    "type": "object",
-    "properties": {
-      "capacityRoutes": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "routeCode": {
-              "type": "string"
-            },
-            "fromTerminalCode": {
-              "type": "string"
-            },
-            "toTerminalCode": {
-              "type": "string"
-            },
-            "sailingDuration": {
-              "type": "string"
-            },
-            "sailings": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "time": {
-                    "oneOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^(1[0-2]|0?[1-9]):[0-5][0-9] (am|pm)$"
-                      }
-                    ]
-                  },
-                  "arrivalTime": {
-                    "oneOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^(1[0-2]|0?[1-9]):[0-5][0-9] (am|pm)$"
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["","Variable"]
-                      }
-                    ]
-                  },
-                  "sailingStatus": {
-                    "type": "string",
-                    "enum": ["future", "past", "current"]
-                  },
-                  "fill": {
-                    "type": "number",
-                    "minimum": 0,
-                    "maximum": 100
-                  },
-                  "carFill": {
-                    "type": "number",
-                    "minimum": 0,
-                    "maximum": 100
-                  },
-                  "oversizeFill": {
-                    "type": "number",
-                    "minimum": 0,
-                    "maximum": 100
-                  },
-                  "vesselName": {
-                    "type": "string"
-                  },
-                  "vesselStatus": {
-                    "type": "string"
-                  }
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BC Ferries API V2 Response Schema",
+  "description": "Schema for the BC Ferries API V2 response from https://bcferriesapi.ca/v2/",
+  "type": "object",
+  "properties": {
+    "capacityRoutes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "routeCode": {
+            "type": "string"
+          },
+          "fromTerminalCode": {
+            "type": "string"
+          },
+          "toTerminalCode": {
+            "type": "string"
+          },
+          "sailingDuration": {
+            "type": "string"
+          },
+          "sailings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "time": {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^(1[0-2]|0?[1-9]):[0-5][0-9] (am|pm)$"
+                    }
+                  ]
                 },
-                "required": [
-                  "time",
-                  "arrivalTime",
-                  "sailingStatus",
-                  "fill",
-                  "carFill",
-                  "oversizeFill",
-                  "vesselName",
-                  "vesselStatus"
-                ]
-              }
+                "arrivalTime": {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^(1[0-2]|0?[1-9]):[0-5][0-9] (am|pm)$"
+                    },
+                    {
+                      "type": "string",
+                      "enum": [
+                        "",
+                        "Variable"
+                      ]
+                    }
+                  ]
+                },
+                "sailingStatus": {
+                  "type": "string",
+                  "enum": [
+                    "future",
+                    "past",
+                    "current",
+                    "cancelled"
+                  ]
+                },
+                "fill": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "carFill": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "oversizeFill": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "vesselName": {
+                  "type": "string"
+                },
+                "vesselStatus": {
+                  "type": "string"
+                },
+                "status": {
+                  "enum": [
+                    "scheduled",
+                    "delayed",
+                    "departed",
+                    "arrived",
+                    "cancelled"
+                  ]
+                },
+                "statusText": {
+                  "type": "string"
+                },
+                "delayMinutes": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "observedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "time",
+                "arrivalTime",
+                "sailingStatus",
+                "fill",
+                "carFill",
+                "oversizeFill",
+                "vesselName",
+                "vesselStatus"
+              ]
             }
           },
-          "required": [
-            "routeCode",
-            "fromTerminalCode",
-            "toTerminalCode",
-            "sailingDuration",
-            "sailings"
-          ]
-        }
-      },
-      "nonCapacityRoutes": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "routeCode": {
-              "type": "string"
-            },
-            "fromTerminalCode": {
-              "type": "string"
-            },
-            "toTerminalCode": {
-              "type": "string"
-            },
-            "sailingDuration": {
-              "type": "string"
-            },
-            "sailings": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "time": {
-                    "oneOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^(1[0-2]|0?[1-9]):[0-5][0-9] [ap]m$"
-                      }
-                    ]
-                  },
-                  "arrivalTime": {
-                    "oneOf": [
-                      {
-                        "type": "string",
-                        "pattern": "^(1[0-2]|0?[1-9]):[0-5][0-9] [ap]m$"
-                      }
-                    ]
-                  },
-                  "vesselName": {
-                    "type": "string"
-                  },
-                  "vesselStatus": {
-                    "type": "string"
-                  }
-                },
-                "required": ["time", "arrivalTime", "vesselName", "vesselStatus"]
-              }
+          "observedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/notice"
             }
           },
-          "required": [
-            "routeCode",
-            "fromTerminalCode",
-            "toTerminalCode",
-            "sailingDuration",
-            "sailings"
-          ]
-        }
+          "terminal": {
+            "$ref": "#/definitions/terminal"
+          }
+        },
+        "required": [
+          "routeCode",
+          "fromTerminalCode",
+          "toTerminalCode",
+          "sailingDuration",
+          "sailings"
+        ]
       }
     },
-    "required": ["capacityRoutes", "nonCapacityRoutes"]
+    "nonCapacityRoutes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "routeCode": {
+            "type": "string"
+          },
+          "fromTerminalCode": {
+            "type": "string"
+          },
+          "toTerminalCode": {
+            "type": "string"
+          },
+          "sailingDuration": {
+            "type": "string"
+          },
+          "sailings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "time": {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^(1[0-2]|0?[1-9]):[0-5][0-9] [ap]m$"
+                    }
+                  ]
+                },
+                "arrivalTime": {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^(1[0-2]|0?[1-9]):[0-5][0-9] [ap]m$"
+                    }
+                  ]
+                },
+                "vesselName": {
+                  "type": "string"
+                },
+                "vesselStatus": {
+                  "type": "string"
+                },
+                "status": {
+                  "enum": [
+                    "scheduled",
+                    "delayed",
+                    "departed",
+                    "arrived",
+                    "cancelled"
+                  ]
+                },
+                "statusText": {
+                  "type": "string"
+                },
+                "delayMinutes": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "observedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "time",
+                "arrivalTime",
+                "vesselName",
+                "vesselStatus"
+              ]
+            }
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/notice"
+            }
+          },
+          "terminal": {
+            "$ref": "#/definitions/terminal"
+          }
+        },
+        "required": [
+          "routeCode",
+          "fromTerminalCode",
+          "toTerminalCode",
+          "sailingDuration",
+          "sailings"
+        ]
+      }
+    },
+    "meta": {
+      "$ref": "#/definitions/responseMeta"
+    }
+  },
+  "required": [
+    "capacityRoutes",
+    "nonCapacityRoutes"
+  ],
+  "definitions": {
+    "sourceHealth": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "fresh",
+            "stale",
+            "unavailable"
+          ]
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastSuccessfulAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "status"
+      ]
+    },
+    "responseMeta": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": "2.1"
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "stale": {
+          "type": "boolean"
+        },
+        "sources": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/sourceHealth"
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "generatedAt",
+        "stale",
+        "sources"
+      ]
+    },
+    "notice": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "terminalCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "routeCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "url",
+        "type",
+        "severity",
+        "observedAt"
+      ]
+    },
+    "terminal": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "detailsURL": {
+          "type": "string"
+        },
+        "directionsURL": {
+          "type": "string"
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "webcams": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "imageURL": {
+                "type": "string"
+              },
+              "observedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "imageURL",
+              "observedAt"
+            ]
+          }
+        }
+      },
+      "required": [
+        "code",
+        "name",
+        "observedAt"
+      ]
+    }
   }
-  
+}

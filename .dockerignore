@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env
+.DS_Store
+bc-ferries-api
+coverage.out
+.env.*
+!.env.example
+*.dump
+*.sql.gz
+backups/

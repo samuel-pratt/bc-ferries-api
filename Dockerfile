@@ -1,47 +1,22 @@
-# Start with the official Golang image
-FROM golang:1.23
-
-# Install Chromium and dependencies
-RUN apt-get update && apt-get install -y \
-  chromium \
-  fonts-liberation \
-  libappindicator3-1 \
-  libasound2 \
-  libatk-bridge2.0-0 \
-  libatk1.0-0 \
-  libcups2 \
-  libdbus-1-3 \
-  libgdk-pixbuf2.0-0 \
-  libnspr4 \
-  libnss3 \
-  libxcomposite1 \
-  libxdamage1 \
-  libxrandr2 \
-  xdg-utils \
-  --no-install-recommends && \
-  rm -rf /var/lib/apt/lists/*
-
-# Set the working directory inside the container
-WORKDIR /app
-
-# Set CHROME_PATH so chromedp can find Chromium
-ENV CHROME_PATH=/usr/bin/chromium
-ENV CHROME_BIN=/usr/bin/chromium
-
-# Copy go.mod and go.sum files
+FROM golang:1.26.7-alpine AS build
+WORKDIR /src
 COPY go.mod go.sum ./
-
-# Download all dependencies
 RUN go mod download
-
-# Copy the source code
 COPY . .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /server ./cmd/server
 
-# Build the Go app
-RUN go build -o main ./cmd/server
+FROM build AS test
+RUN apk add --no-cache gcc musl-dev chromium && adduser -D -u 10001 app && chown -R app /src /go
+ENV CHROME_NO_SANDBOX=true CHROME_SMOKE=true
+USER app
+CMD ["go", "test", "-race", "-count=1", "./..."]
 
-# Expose port 8080 to the outside world
-EXPOSE 8080
-
-# Command to run the executable
-CMD ["./main"]
+FROM alpine:3.23
+RUN apk add --no-cache ca-certificates tzdata chromium wget && adduser -D -u 10001 app
+WORKDIR /app
+COPY --from=build /server /app/server
+COPY static ./static
+ENV CHROME_NO_SANDBOX=true CHROME_PATH=/usr/bin/chromium CHROME_BIN=/usr/bin/chromium
+USER app
+EXPOSE 8081
+ENTRYPOINT ["/app/server"]

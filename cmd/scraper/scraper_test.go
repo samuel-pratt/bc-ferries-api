@@ -6,9 +6,77 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/chromedp/chromedp"
+	"github.com/samuel-pratt/bc-ferries-api/cmd/models"
 )
+
+func TestChromiumContainer(t *testing.T) {
+	if os.Getenv("CHROME_SMOKE") != "true" {
+		t.Skip("run scripts/verify.sh for Chromium test")
+	}
+	ctx, cancel := newBrowserContext()
+	defer cancel()
+	if err := chromedp.Run(ctx); err != nil {
+		t.Fatal(err)
+	}
+	html, _, err := fetchWithChromedp(ctx, "data:text/html,<html><body>release-smoke</body></html>")
+	if err != nil || !strings.Contains(html, "release-smoke") {
+		t.Fatalf("Chromium smoke failed: %v %s", err, html)
+	}
+}
+
+func TestDelayDoesNotOverrideFinalStatus(t *testing.T) {
+	for input, want := range map[string]string{"cancelled": "cancelled", "past": "arrived", "current": "departed"} {
+		sailing := models.CapacitySailing{SailingStatus: input, VesselStatus: "Delayed 25 minutes"}
+		normalizeCapacityStatus(&sailing)
+		if sailing.Status != want {
+			t.Fatalf("%s changed to %s", input, sailing.Status)
+		}
+	}
+}
+
+func TestParseCurrentConditionsOperationalData(t *testing.T) {
+	fixturePath := filepath.Join("..", "..", "html", "current_conditions.html")
+	html, err := os.ReadFile(fixturePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	document, err := goquery.NewDocumentFromReader(bytes.NewReader(html))
+	if err != nil {
+		t.Fatal(err)
+	}
+	observedAt := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+
+	notices := parseServiceNotices(document, "TSASWB", "TSA", observedAt)
+	if len(notices) != 3 {
+		t.Fatalf("expected 3 notices, got %d", len(notices))
+	}
+	if notices[0].ID == "" || notices[0].URL == "" {
+		t.Fatalf("notice lacks stable identity: %#v", notices[0])
+	}
+
+	terminal := parseTerminalInfo(document, "TSA", observedAt)
+	if terminal == nil {
+		t.Fatal("expected terminal information")
+	}
+	if terminal.Name != "Vancouver (Tsawwassen)" {
+		t.Fatalf("unexpected terminal name %q", terminal.Name)
+	}
+	if len(terminal.Webcams) != 2 {
+		t.Fatalf("expected 2 webcams, got %d", len(terminal.Webcams))
+	}
+}
+
+func TestNormalizeCapacityStatus(t *testing.T) {
+	sailing := models.CapacitySailing{SailingStatus: "future", VesselStatus: "Delayed approximately 25 minutes"}
+	normalizeCapacityStatus(&sailing)
+	if sailing.Status != "delayed" || sailing.DelayMinutes == nil || *sailing.DelayMinutes != 25 {
+		t.Fatalf("unexpected normalized sailing: %#v", sailing)
+	}
+}
 
 func TestParseDailyScheduleSailings_ParsesUpdatedSWBTSAOnwardTimes(t *testing.T) {
 	fixturePath := filepath.Join("..", "..", "html", "daily_schedule.html")

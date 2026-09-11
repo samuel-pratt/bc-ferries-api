@@ -28,6 +28,7 @@ func SetupRouter() *httprouter.Router {
 	router.GET("/api/:departureTerminal/:destinationTerminal/", GetSailingsByDepartureAndDestinationTerminals)
 
 	router.GET("/healthcheck/", HealthCheck)
+	router.GET("/readyz/", ReadyCheck)
 
 	router.NotFound = http.FileServer(http.Dir("./static"))
 

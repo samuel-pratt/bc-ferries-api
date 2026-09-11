@@ -19,16 +19,17 @@ import (
  *
  * @return void
  */
-func SetupCron() {
+func SetupCron() *gocron.Scheduler {
 	s := gocron.NewScheduler(time.UTC)
 
-	s.Every(1).Minute().Do(func() {
+	s.Every(1).Minute().SingletonMode().Do(func() {
 		scraper.ScrapeCapacityRoutes()
 	})
 
-	s.Every(4).Hour().Do(func() {
+	s.Every(4).Hour().SingletonMode().Do(func() {
 		scraper.ScrapeNonCapacityRoutes()
 	})
 
 	s.StartAsync()
+	return s
 }

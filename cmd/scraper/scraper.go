@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -79,7 +80,7 @@ func ScrapeCapacityRoutes() {
 			link := MakeCurrentConditionsLink(departureTerminals[i], destinationTerminals[i][j])
 
 			// Make HTTP GET request
-			client := &http.Client{}
+			client := &http.Client{Timeout: 20 * time.Second}
 			req, err := http.NewRequest("GET", link, nil)
 			if err != nil {
 				log.Printf("ScrapeCapacityRoutes: failed to create request for %s: %v", link, err)
@@ -93,9 +94,13 @@ func ScrapeCapacityRoutes() {
 				continue
 			}
 
-			defer response.Body.Close()
+			if response.StatusCode != http.StatusOK {
+				response.Body.Close()
+				continue
+			}
 
 			document, err := goquery.NewDocumentFromReader(response.Body)
+			response.Body.Close()
 			if err != nil {
 				log.Printf("ScrapeCapacityRoutes: failed to parse response from %s: %v", link, err)
 				continue
@@ -118,18 +123,26 @@ func ScrapeCapacityRoutes() {
  * @return void
  */
 func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, toTerminalCode string) {
+	if document.Find("table.detail-departure-table").Length() == 0 {
+		log.Printf("capacity page invalid for %s%s; retaining previous data", fromTerminalCode, toTerminalCode)
+		return
+	}
+	observedAt := time.Now().UTC()
 	route := models.CapacityRoute{
 		RouteCode:        fromTerminalCode + toTerminalCode,
 		ToTerminalCode:   toTerminalCode,
 		FromTerminalCode: fromTerminalCode,
 		Sailings:         []models.CapacitySailing{},
+		ObservedAt:       observedAt,
 	}
+	route.Notices = parseServiceNotices(document, route.RouteCode, fromTerminalCode, observedAt)
+	route.Terminal = parseTerminalInfo(document, fromTerminalCode, observedAt)
 
 	document.Find("table.detail-departure-table").Each(func(i int, table *goquery.Selection) {
 		table.Find("tbody").Each(func(j int, tbody *goquery.Selection) {
 			tbody.Find("tr.mobile-friendly-row").Each(func(k int, row *goquery.Selection) {
 				// Init sailing
-				sailing := models.CapacitySailing{}
+				sailing := models.CapacitySailing{ObservedAt: observedAt}
 
 				row.Find("td").Each(func(l int, td *goquery.Selection) {
 					rowTextLower := strings.ToLower(row.Text())
@@ -359,6 +372,7 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 				})
 
 				// Add salining to route
+				normalizeCapacityStatus(&sailing)
 				route.Sailings = append(route.Sailings, sailing)
 			})
 		})
@@ -379,32 +393,22 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
 	sailingDuration = strings.ReplaceAll(sailingDuration, "sailing duration:", "")
 	sailingDuration = strings.TrimSpace(sailingDuration)
 
+	if len(route.Sailings) == 0 {
+		log.Printf("no capacity sailings for %s; retaining previous data", route.RouteCode)
+		return
+	}
 	sailingsJson, err := json.Marshal(route.Sailings)
 	if err != nil {
 		log.Printf("ScrapeCapacityRoute: failed to marshal sailings for route %s: %v", route.RouteCode, err)
 		return
 	}
+	operationalJSON, err := json.Marshal(models.RouteOperationalData{Notices: route.Notices, Terminal: route.Terminal, ObservedAt: observedAt})
+	if err != nil {
+		log.Printf("ScrapeCapacityRoute: failed to marshal operational data for route %s: %v", route.RouteCode, err)
+		return
+	}
 
-	sqlStatement := `
-		INSERT INTO capacity_routes (
-			route_code,
-			from_terminal_code,
-			to_terminal_code,
-			sailing_duration,
-			sailings
-		)
-		VALUES
-			($1, $2, $3, $4, $5) ON CONFLICT (route_code) DO
-		UPDATE
-		SET
-			route_code = EXCLUDED.route_code,
-			from_terminal_code = EXCLUDED.from_terminal_code,
-			to_terminal_code = EXCLUDED.to_terminal_code,
-			sailing_duration = EXCLUDED.sailing_duration,
-			sailings = EXCLUDED.sailings
-		WHERE
-			capacity_routes.route_code = EXCLUDED.route_code`
-	_, err = db.Conn.Exec(sqlStatement, route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingDuration, sailingsJson)
+	err = db.SaveRoute("capacity", route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingDuration, sailingsJson, operationalJSON)
 	if err != nil {
 		log.Printf("ScrapeCapacityRoute: failed to insert route %s: %v", route.RouteCode, err)
 		return
@@ -419,8 +423,12 @@ func ScrapeCapacityRoute(document *goquery.Document, fromTerminalCode string, to
  * @return void
  */
 func ScrapeNonCapacityRoutes() {
-	ctx, cancel := chromedp.NewContext(context.Background())
+	ctx, cancel := newBrowserContext()
 	defer cancel()
+	if err := chromedp.Run(ctx); err != nil {
+		log.Printf("Chrome startup failed: %v", err)
+		return
+	}
 
 	departureTerminals := staticdata.GetNonCapacityDepartureTerminals()
 	destinationTerminals := staticdata.GetNonCapacityDestinationTerminals()
@@ -477,6 +485,7 @@ func ScrapeNonCapacityRoutes() {
  * @return bool - True when route data was parsed and persisted
  */
 func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode, toTerminalCode string, isDaily bool) bool {
+	observedAt := time.Now().UTC()
 	loc, err := time.LoadLocation("America/Vancouver")
 	if err != nil {
 		log.Printf("ScrapeNonCapacityRoute: failed to load PT location: %v", err)
@@ -498,7 +507,10 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode, toTerm
 		FromTerminalCode: fromTerminalCode,
 		ToTerminalCode:   toTerminalCode,
 		Sailings:         []models.NonCapacitySailing{},
+		ObservedAt:       observedAt,
 	}
+	route.Notices = parseServiceNotices(document, route.RouteCode, fromTerminalCode, observedAt)
+	route.Terminal = parseTerminalInfo(document, fromTerminalCode, observedAt)
 	sailingDuration := ""
 	if isDaily {
 		if dailySailings, dailyDuration, ok := parseDailyScheduleSailings(document); ok {
@@ -758,6 +770,8 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode, toTerm
 			continue
 		}
 		seenSailings[key] = struct{}{}
+		sailing.Status = "scheduled"
+		sailing.ObservedAt = observedAt
 		uniqueSailings = append(uniqueSailings, sailing)
 	}
 	route.Sailings = uniqueSailings
@@ -772,25 +786,13 @@ func ScrapeNonCapacityRoute(document *goquery.Document, fromTerminalCode, toTerm
 		log.Printf("ScrapeNonCapacityRoute: marshal error for %s: %v", route.RouteCode, err)
 		return false
 	}
+	operationalJSON, err := json.Marshal(models.RouteOperationalData{Notices: route.Notices, Terminal: route.Terminal, ObservedAt: observedAt})
+	if err != nil {
+		log.Printf("ScrapeNonCapacityRoute: operational metadata marshal error for %s: %v", route.RouteCode, err)
+		return false
+	}
 
-	sqlStatement := `
-		INSERT INTO non_capacity_routes (
-			route_code, 
-			from_terminal_code, 
-			to_terminal_code, 
-			sailing_duration,
-			sailings
-		) 
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (route_code) DO UPDATE SET
-			from_terminal_code = EXCLUDED.from_terminal_code, 
-			to_terminal_code = EXCLUDED.to_terminal_code,
-			sailing_duration = EXCLUDED.sailing_duration,
-			sailings = EXCLUDED.sailings 
-	`
-	_, err = db.Conn.Exec(sqlStatement,
-		route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingDuration, sailingsJSON,
-	)
+	err = db.SaveRoute("noncapacity", route.RouteCode, route.FromTerminalCode, route.ToTerminalCode, sailingDuration, sailingsJSON, operationalJSON)
 	if err != nil {
 		log.Printf("ScrapeNonCapacityRoute: DB insert/update failed for %s: %v", route.RouteCode, err)
 		return false
@@ -887,6 +889,118 @@ func parseDailyScheduleSailings(document *goquery.Document) ([]models.NonCapacit
 	return sailings, sailingDuration, len(sailings) > 0
 }
 
+func normalizeCapacityStatus(sailing *models.CapacitySailing) {
+	sailing.StatusText = strings.TrimSpace(sailing.VesselStatus)
+	switch sailing.SailingStatus {
+	case "cancelled":
+		sailing.Status = "cancelled"
+	case "past":
+		sailing.Status = "arrived"
+	case "current":
+		sailing.Status = "departed"
+	default:
+		sailing.Status = "scheduled"
+	}
+
+	combined := strings.TrimSpace(sailing.VesselName + " " + sailing.VesselStatus)
+	delayRe := regexp.MustCompile(`(?i)delay(?:ed)?(?:\s+approx(?:imately)?\.?)?\s*(\d+)\s*(?:m|min|minutes?)`)
+	if match := delayRe.FindStringSubmatch(combined); len(match) == 2 && sailing.Status == "scheduled" {
+		if minutes, err := strconv.Atoi(match[1]); err == nil {
+			sailing.DelayMinutes = &minutes
+			sailing.Status = "delayed"
+			if sailing.StatusText == "" {
+				sailing.StatusText = match[0]
+			}
+		}
+	}
+}
+
+func parseServiceNotices(document *goquery.Document, routeCode, terminalCode string, observedAt time.Time) []models.ServiceNotice {
+	seen := make(map[string]struct{})
+	notices := make([]models.ServiceNotice, 0)
+	document.Find(".cc-service-notice a[href]").Each(func(_ int, link *goquery.Selection) {
+		href, ok := link.Attr("href")
+		if !ok || strings.TrimSpace(href) == "" {
+			return
+		}
+		absoluteURL := href
+		if strings.HasPrefix(href, "/") {
+			absoluteURL = "https://www.bcferries.com" + href
+		}
+		id := ""
+		if match := regexp.MustCompile(`serviceNoticeCode=([0-9]+)`).FindStringSubmatch(href); len(match) == 2 {
+			id = match[1]
+		}
+		if id == "" {
+			id = strings.ToLower(strings.Map(func(r rune) rune {
+				if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+					return r
+				}
+				return -1
+			}, strings.TrimSpace(link.Text())))
+		}
+		if _, exists := seen[id]; exists || id == "" {
+			return
+		}
+		seen[id] = struct{}{}
+		title := strings.Join(strings.Fields(link.Text()), " ")
+		noticeType, severity := classifyNotice(title)
+		notices = append(notices, models.ServiceNotice{
+			ID: id, Title: title, URL: absoluteURL, Type: noticeType, Severity: severity,
+			TerminalCodes: []string{terminalCode}, RouteCodes: []string{routeCode}, ObservedAt: observedAt,
+		})
+	})
+	return notices
+}
+
+func classifyNotice(title string) (string, string) {
+	lower := strings.ToLower(title)
+	switch {
+	case strings.Contains(lower, "cancel") || strings.Contains(lower, "closure"):
+		return "cancellation", "critical"
+	case strings.Contains(lower, "delay") || strings.Contains(lower, "revised schedule"):
+		return "delay", "warning"
+	case strings.Contains(lower, "terminal") || strings.Contains(lower, "parking"):
+		return "terminal", "information"
+	case strings.Contains(lower, "amenit") || strings.Contains(lower, "capacity"):
+		return "service-change", "warning"
+	default:
+		return "information", "information"
+	}
+}
+
+func parseTerminalInfo(document *goquery.Document, terminalCode string, observedAt time.Time) *models.TerminalInfo {
+	info := &models.TerminalInfo{Code: terminalCode, ObservedAt: observedAt, Webcams: []models.Webcam{}}
+	terminal := document.Find("#terminalDetails").First()
+	info.Name = strings.Join(strings.Fields(terminal.Find("h4").First().Text()), " ")
+	if href, ok := terminal.Find("a.terminal-detail-btn").First().Attr("href"); ok {
+		if strings.HasPrefix(href, "/") {
+			href = "https://www.bcferries.com" + href
+		}
+		info.DetailsURL = href
+	}
+	terminal.Find("a[href*='maps']").EachWithBreak(func(_ int, link *goquery.Selection) bool {
+		info.DirectionsURL, _ = link.Attr("href")
+		return false
+	})
+	document.Find(".webcam-wrapper img[src]").Each(func(index int, image *goquery.Selection) {
+		src, ok := image.Attr("src")
+		if !ok {
+			return
+		}
+		container := image.Parent()
+		label := strings.Join(strings.Fields(container.Find("p").First().Text()), " ")
+		info.Webcams = append(info.Webcams, models.Webcam{
+			ID:    fmt.Sprintf("%s-%d", strings.ToLower(terminalCode), index+1),
+			Label: label, ImageURL: src, ObservedAt: observedAt,
+		})
+	})
+	if info.Name == "" && len(info.Webcams) == 0 && info.DetailsURL == "" {
+		return nil
+	}
+	return info
+}
+
 /********************/
 /* Helper Functions */
 /********************/
@@ -904,6 +1018,10 @@ func parseDailyScheduleSailings(document *goquery.Document) ([]models.NonCapacit
  * @return error - Any error encountered during navigation or retrieval
  */
 func fetchWithChromedp(ctx context.Context, url string) (string, string, error) {
+	tab, closeTab := chromedp.NewContext(ctx)
+	defer closeTab()
+	ctx, cancel := context.WithTimeout(tab, 45*time.Second)
+	defer cancel()
 	var html string
 	var finalURL string
 	err := chromedp.Run(ctx,
@@ -914,6 +1032,18 @@ func fetchWithChromedp(ctx context.Context, url string) (string, string, error) 
 	)
 
 	return html, finalURL, err
+}
+
+func newBrowserContext() (context.Context, context.CancelFunc) {
+	opts := append([]chromedp.ExecAllocatorOption{}, chromedp.DefaultExecAllocatorOptions[:]...)
+	// Docker runs Chrome as an unprivileged user, with all capabilities dropped.
+	// Its nested namespace sandbox is unavailable on many Docker hosts.
+	if os.Getenv("CHROME_NO_SANDBOX") == "true" {
+		opts = append(opts, chromedp.NoSandbox)
+	}
+	alloc, closeAlloc := chromedp.NewExecAllocator(context.Background(), opts...)
+	ctx, closeBrowser := chromedp.NewContext(alloc)
+	return ctx, func() { closeBrowser(); closeAlloc() }
 }
 
 // isDailySchedulePage detects redirects from a daily URL to a seasonal page.

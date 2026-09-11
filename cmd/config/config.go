@@ -1,8 +1,9 @@
 package config
 
 import (
-	"fmt"
 	"log"
+	"net"
+	"net/url"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -35,9 +36,9 @@ var (
  * @return void
  */
 func LoadEnv() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	// A local .env file is convenient for development. In Docker and other
+	// production environments, configuration comes from the process environment.
+	_ = godotenv.Load()
 
 	// DB config
 	DB = DBConfig{
@@ -53,7 +54,10 @@ func LoadEnv() {
 		log.Fatal("Missing required SQL environment variables")
 	}
 
-	DB.URL = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", DB.User, DB.Password, DB.Host, DB.Port, DB.Database, DB.SSL)
+	u := url.URL{Scheme: "postgres", User: url.UserPassword(DB.User, DB.Password), Host: net.JoinHostPort(DB.Host, DB.Port), Path: "/" + DB.Database}
+	q := url.Values{"sslmode": {DB.SSL}, "connect_timeout": {"5"}, "statement_timeout": {"10000"}}
+	u.RawQuery = q.Encode()
+	DB.URL = u.String()
 
 	// Port
 	ServerPort = os.Getenv("PORT")

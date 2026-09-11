@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -17,10 +18,12 @@ import (
 type AllDataResponse struct {
 	CapacityRoutes    []models.CapacityRoute    `json:"capacityRoutes"`
 	NonCapacityRoutes []models.NonCapacityRoute `json:"nonCapacityRoutes"`
+	Meta              models.ResponseMeta       `json:"meta"`
 }
 
 type CapacityResponse struct {
 	Routes []models.CapacityRoute `json:"routes"`
+	Meta   models.ResponseMeta    `json:"meta"`
 }
 
 /*************/
@@ -45,6 +48,7 @@ func GetCapacityAndNonCapacitySailings(w http.ResponseWriter, r *http.Request, p
 	response := AllDataResponse{
 		CapacityRoutes:    capacityRoute,
 		NonCapacityRoutes: nonCapacityRoute,
+		Meta:              buildResponseMeta(capacityRoute, nonCapacityRoute, true, true),
 	}
 
 	jsonString, _ := json.Marshal(response)
@@ -53,6 +57,66 @@ func GetCapacityAndNonCapacitySailings(w http.ResponseWriter, r *http.Request, p
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonString)
 
+}
+
+func buildResponseMeta(capacity []models.CapacityRoute, nonCapacity []models.NonCapacityRoute, requireCapacity, requireSchedule bool) models.ResponseMeta {
+	now := time.Now().UTC()
+	oldestCapacity := oldestCapacityObservation(capacity)
+	oldestSchedule := oldestScheduleObservation(nonCapacity)
+	stale := (requireCapacity && (oldestCapacity == nil || now.Sub(*oldestCapacity) > 10*time.Minute)) ||
+		(requireSchedule && (oldestSchedule == nil || now.Sub(*oldestSchedule) > 8*time.Hour))
+	sources := make(map[string]models.SourceHealth)
+	if requireCapacity {
+		sources["currentConditions"] = sourceHealth(oldestCapacity, now, 10*time.Minute)
+	}
+	if requireSchedule {
+		sources["schedules"] = sourceHealth(oldestSchedule, now, 8*time.Hour)
+	}
+	return models.ResponseMeta{
+		SchemaVersion: "2.1",
+		GeneratedAt:   now,
+		Stale:         stale,
+		Sources:       sources,
+	}
+}
+
+func sourceHealth(observed *time.Time, now time.Time, maxAge time.Duration) models.SourceHealth {
+	if observed == nil {
+		return models.SourceHealth{Status: "unavailable"}
+	}
+	status := "fresh"
+	if now.Sub(*observed) > maxAge {
+		status = "stale"
+	}
+	return models.SourceHealth{Status: status, ObservedAt: observed, LastSuccessfulAt: observed}
+}
+
+func oldestCapacityObservation(routes []models.CapacityRoute) *time.Time {
+	var oldest *time.Time
+	for _, route := range routes {
+		if route.ObservedAt.IsZero() {
+			return nil
+		}
+		value := route.ObservedAt
+		if oldest == nil || value.Before(*oldest) {
+			oldest = &value
+		}
+	}
+	return oldest
+}
+
+func oldestScheduleObservation(routes []models.NonCapacityRoute) *time.Time {
+	var oldest *time.Time
+	for _, route := range routes {
+		if route.ObservedAt.IsZero() {
+			return nil
+		}
+		value := route.ObservedAt
+		if oldest == nil || value.Before(*oldest) {
+			oldest = &value
+		}
+	}
+	return oldest
 }
 
 /*
@@ -71,9 +135,10 @@ func GetCapacitySailings(w http.ResponseWriter, r *http.Request, ps httprouter.P
 
 	response := CapacityResponse{
 		Routes: routes,
+		Meta:   buildResponseMeta(routes, nil, true, false),
 	}
 
-	if len(response.Routes[0].Sailings) == 0 {
+	if len(response.Routes) == 0 || len(response.Routes[0].Sailings) == 0 {
 		jsonString, _ := json.Marshal("BC Ferries Data Currently Down")
 
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -104,6 +169,7 @@ func GetNonCapacitySailings(w http.ResponseWriter, r *http.Request, ps httproute
 
 	response := models.NonCapacityResponse{
 		Routes: routes,
+		Meta:   buildResponseMeta(nil, routes, false, true),
 	}
 
 	jsonString, _ := json.Marshal(response)
@@ -280,20 +346,20 @@ func ConvertV1ResponseToV2Response(allData AllDataResponse) map[string]map[strin
 					Sailings:        []models.Sailing{},
 				}
 
-                for _, capSailing := range capRoute.Sailings {
-                    if capSailing.SailingStatus == "future" || capSailing.SailingStatus == "cancelled" {
-                        route.Sailings = append(route.Sailings, models.Sailing{
-                            DepartureTime: capSailing.DepartureTime,
-                            ArrivalTime:   capSailing.ArrivalTime,
-                            IsCancelled:   capSailing.SailingStatus == "cancelled",
-                            Fill:          capSailing.Fill,
-                            CarFill:       capSailing.CarFill,
-                            OversizeFill:  capSailing.OversizeFill,
-                            VesselName:    capSailing.VesselName,
-                            VesselStatus:  capSailing.VesselStatus,
-                        })
-                    }
-                }
+				for _, capSailing := range capRoute.Sailings {
+					if capSailing.SailingStatus == "future" || capSailing.SailingStatus == "cancelled" {
+						route.Sailings = append(route.Sailings, models.Sailing{
+							DepartureTime: capSailing.DepartureTime,
+							ArrivalTime:   capSailing.ArrivalTime,
+							IsCancelled:   capSailing.SailingStatus == "cancelled",
+							Fill:          capSailing.Fill,
+							CarFill:       capSailing.CarFill,
+							OversizeFill:  capSailing.OversizeFill,
+							VesselName:    capSailing.VesselName,
+							VesselStatus:  capSailing.VesselStatus,
+						})
+					}
+				}
 
 				if len(route.Sailings) > 0 {
 					if _, ok := schedule[fromTerminal]; !ok {
@@ -359,4 +425,20 @@ func contains(s []string, str string) bool {
 		}
 	}
 	return false
+}
+
+// Readiness checks database access as well as usable cached route data.
+func ReadyCheck(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	var usable bool
+	err := db.Conn.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM capacity_routes WHERE jsonb_array_length(sailings)>0)").Scan(&usable)
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	if err != nil || !usable {
+		w.WriteHeader(503)
+		w.Write([]byte("{\"status\":\"unavailable\"}"))
+		return
+	}
+	w.Write([]byte("{\"status\":\"ready\"}"))
 }
