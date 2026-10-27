@@ -26,6 +26,33 @@ func document(s string) *goquery.Document {
 }
 func noDetails(string) (*goquery.Document, error) { return nil, fmt.Errorf("detail unavailable") }
 
+func TestExplicitConditionsNoService(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/conditions_no_service.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, 10, 27, 3, 44, 0, 0, time.UTC)
+	c := parseConditions(document(string(fixture)), "TSA", "NAN", at, noDetails)
+	if c.DataStatus != "no-service" || c.Sailings == nil || len(c.Sailings) != 0 || len(c.Warnings) != 0 ||
+		c.ServiceDate != "2026-10-26" || !c.ObservedAt.Equal(at) || c.CheckedAt == nil || !c.CheckedAt.Equal(at) {
+		t.Fatalf("no-service observation lost status/date/freshness: %#v", c)
+	}
+	for name, html := range map[string]string{
+		"missing page":        `<h1>Service unavailable</h1>`,
+		"empty table":         `<table class="detail-departure-table"></table>`,
+		"text outside banner": `<p>No sailings are scheduled for this route today</p>`,
+		"unrecognized banner": `<div class="cc-fully-booked">Current conditions unavailable</div>`,
+		"conflicting rows":    string(fixture) + `<table class="detail-departure-table"><tr class="mobile-friendly-row"><td>9:00 am Vessel</td><td>Upcoming</td></tr></table>`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := parseConditions(document(html), "TSA", "NAN", at, noDetails)
+			if got.DataStatus == "no-service" || got.DataStatus == "available" {
+				t.Fatalf("ambiguous or failed page treated as success: %#v", got)
+			}
+		})
+	}
+}
+
 // Reduced from the HSB-NAN, SWB-SGI and DUK-TSA live markup captured Sep 11.
 func TestLiveConditionEdgeCases(t *testing.T) {
 	d := document(`<table class="detail-departure-table"><tbody>

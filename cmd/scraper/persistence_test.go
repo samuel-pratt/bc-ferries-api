@@ -3,12 +3,14 @@ package scraper
 import (
 	"database/sql"
 	"encoding/json"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"testing"
 
 	"github.com/samuel-pratt/bc-ferries-api/cmd/db"
 	"github.com/samuel-pratt/bc-ferries-api/cmd/models"
+	"github.com/samuel-pratt/bc-ferries-api/cmd/router"
 )
 
 func TestPartialScrapePreservesCachedSailings(t *testing.T) {
@@ -78,5 +80,43 @@ to_terminal_code VARCHAR(3) NOT NULL, sailing_duration VARCHAR(7) NOT NULL, sail
 	recovered := db.GetCapacitySailings()
 	if len(recovered) != 1 || recovered[0].DataStatus != "available" || len(recovered[0].Sailings) != 2 || !recovered[0].ObservedAt.After(before[0].ObservedAt) {
 		t.Fatalf("fresh scrape did not recover: %#v", recovered)
+	}
+	fixture, err := os.ReadFile("testdata/conditions_no_service.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ScrapeCapacityRoute(document(string(fixture)), "TSA", "SWB")
+	noService := db.GetCapacitySailings()
+	if len(noService) != 1 || noService[0].DataStatus != "no-service" || noService[0].Sailings == nil || len(noService[0].Sailings) != 0 ||
+		noService[0].ServiceDate == "" || !noService[0].ObservedAt.After(recovered[0].ObservedAt) {
+		t.Fatalf("explicit no-service day failed to clear old sailings: %#v", noService)
+	}
+	// Even a fleet with no scheduled sailings must return the normal response,
+	// not the legacy data-down string or a database-readiness failure.
+	res := httptest.NewRecorder()
+	router.GetCapacitySailings(res, httptest.NewRequest("GET", "/v2/capacity/", nil), nil)
+	var response router.CapacityResponse
+	if err = json.Unmarshal(res.Body.Bytes(), &response); err != nil || len(response.Routes) != 1 || response.Routes[0].DataStatus != "no-service" || response.Meta.Stale {
+		t.Fatalf("no-service HTTP response invalid: %s (%v)", res.Body.String(), err)
+	}
+	res = httptest.NewRecorder()
+	router.ReadyCheck(res, httptest.NewRequest("GET", "/readyz/", nil), nil)
+	if res.Code != 200 {
+		t.Fatalf("no-service snapshot failed readiness: %s", res.Body.String())
+	}
+	ScrapeCapacityRoute(document(`<h1>Service unavailable</h1>`), "TSA", "SWB")
+	failed := db.GetCapacitySailings()
+	if len(failed) != 1 || failed[0].DataStatus != "unavailable" || !failed[0].ObservedAt.Equal(noService[0].ObservedAt) {
+		t.Fatalf("later failure falsely refreshed no-service observation: %#v", failed)
+	}
+	res = httptest.NewRecorder()
+	router.ReadyCheck(res, httptest.NewRequest("GET", "/readyz/", nil), nil)
+	if res.Code != 503 {
+		t.Fatal("unavailable empty snapshot passed readiness")
+	}
+	ScrapeCapacityRoute(document(good), "TSA", "SWB")
+	resumed := db.GetCapacitySailings()
+	if len(resumed) != 1 || resumed[0].DataStatus != "available" || len(resumed[0].Sailings) != 2 {
+		t.Fatalf("service failed to resume: %#v", resumed)
 	}
 }

@@ -142,7 +142,7 @@ func ScrapeCapacityRoute(d *goquery.Document, from, to string) {
 	if !capacity {
 		return
 	}
-	if c.DataStatus != "available" {
+	if c.DataStatus != "available" && c.DataStatus != "no-service" {
 		_ = db.MarkRouteUnavailable("capacity", from, to, c.SourceURL, at)
 		return
 	}

@@ -60,6 +60,23 @@ func parseConditions(d *goquery.Document, from, to string, at time.Time, fetch d
 	result.Notices = parseServiceNotices(d, from+to, from, at)
 	result.Terminal = parseTerminalInfo(d, from, at)
 	table := d.Find("table.detail-departure-table")
+	// BC Ferries publishes this explicit route-level banner on non-operating
+	// days (for example TSA-NAN). An absent table alone is not proof of no service.
+	noService := false
+	d.Find(".cc-fully-booked").Each(func(_ int, banner *goquery.Selection) {
+		if strings.EqualFold(clean(banner.Text()), "No sailings are scheduled for this route today") {
+			noService = true
+		}
+	})
+	if noService {
+		if table.Find("tr").Length() > 0 {
+			result.DataStatus = "unavailable"
+			result.Warnings = append(result.Warnings, "no-service message conflicts with sailing table")
+		} else {
+			result.DataStatus = "no-service"
+		}
+		return result
+	}
 	if table.Length() == 0 {
 		result.DataStatus = "not-published"
 		if result.Terminal == nil && !strings.Contains(strings.ToLower(d.Text()), "current conditions") {

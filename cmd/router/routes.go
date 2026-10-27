@@ -86,7 +86,8 @@ func buildResponseMeta(capacity []models.CapacityRoute, nonCapacity []models.Non
 		present := map[string]bool{}
 		for _, r := range capacity {
 			present[r.RouteCode] = true
-			if r.DataStatus != "available" || len(r.Warnings) > 0 {
+			validNoService := r.DataStatus == "no-service" && len(r.Sailings) == 0
+			if (r.DataStatus != "available" && !validNoService) || len(r.Warnings) > 0 {
 				issues = append(issues, "current conditions incomplete: "+r.RouteCode)
 			}
 			if r.ServiceDate != today {
@@ -204,7 +205,7 @@ func GetCapacitySailings(w http.ResponseWriter, r *http.Request, ps httprouter.P
 
 	usable := false
 	for _, route := range routes {
-		if len(route.Sailings) > 0 {
+		if len(route.Sailings) > 0 || route.DataStatus == "no-service" {
 			usable = true
 			break
 		}
@@ -506,7 +507,11 @@ func ReadyCheck(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 	var usable bool
-	err := db.Conn.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM capacity_routes WHERE jsonb_array_length(sailings)>0)").Scan(&usable)
+	err := db.Conn.QueryRowContext(ctx, `SELECT EXISTS(
+SELECT 1 FROM capacity_routes r
+LEFT JOIN route_operational_data o ON o.kind='capacity' AND o.route_code=r.route_code
+WHERE jsonb_array_length(r.sailings)>0 OR o.payload->>'dataStatus'='no-service'
+)`).Scan(&usable)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	if err != nil || !usable {
