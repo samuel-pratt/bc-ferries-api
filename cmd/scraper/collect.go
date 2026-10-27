@@ -87,7 +87,10 @@ func catalog(kind string, fallback []string, d *goquery.Document) []string {
 }
 
 func ScrapeCapacityRoutes() {
-	index, _ := fetchDocument("https://www.bcferries.com/current-conditions")
+	index, err := fetchDocument("https://www.bcferries.com/current-conditions")
+	if err != nil {
+		log.Printf("scrape conditions catalog failed: %v", err)
+	}
 	pairs := catalog("conditions", staticdata.ConditionPairs(), index)
 	jobs := make(chan string)
 	var wg sync.WaitGroup
@@ -101,6 +104,7 @@ func ScrapeCapacityRoutes() {
 				parts := strings.Split(p, "-")
 				d, e := fetchDocument(MakeCurrentConditionsLink(parts[0], parts[1]))
 				if e != nil {
+					log.Printf("scrape conditions %s fetch failed: %v", p, e)
 					at := time.Now().UTC()
 					_ = db.SaveSnapshot("conditions", parts[0]+parts[1], models.ConditionsSnapshot{DataState: models.DataState{DataStatus: "unavailable", CheckedAt: &at, SourceURL: MakeCurrentConditionsLink(parts[0], parts[1])}, Sailings: []models.CapacitySailing{}})
 					if isCapacityPair(p) {
@@ -129,6 +133,9 @@ func isCapacityPair(pair string) bool {
 func ScrapeCapacityRoute(d *goquery.Document, from, to string) {
 	at := time.Now().UTC()
 	c := parseConditions(d, from, to, at, fetchDocument)
+	if c.DataStatus == "unavailable" {
+		log.Printf("scrape conditions %s-%s parse failed: warnings=%v", from, to, c.Warnings)
+	}
 	enrichServiceNotices(c.Notices)
 	if e := db.SaveSnapshot("conditions", from+to, c); e != nil {
 		log.Print(e)
@@ -193,6 +200,8 @@ func ScrapeNonCapacityRoutes() {
 	var index *goquery.Document
 	if e == nil {
 		index, _ = goquery.NewDocumentFromReader(strings.NewReader(html))
+	} else {
+		log.Printf("scrape schedules catalog failed: %v", e)
 	}
 	pairs := catalog("schedules", staticdata.SchedulePairs(), index)
 	for _, p := range pairs {
@@ -204,6 +213,7 @@ func ScrapeNonCapacityRoutes() {
 		for _, url := range []string{MakeScheduleLink(parts[0], parts[1]), MakeSeasonalScheduleLink(parts[0], parts[1])} {
 			html, final, e := fetchWithChromedp(ctx, url)
 			if e != nil {
+				log.Printf("scrape schedule %s fetch failed (%s): %v", p, url, e)
 				continue
 			}
 			d, e := goquery.NewDocumentFromReader(strings.NewReader(html))
@@ -216,6 +226,7 @@ func ScrapeNonCapacityRoutes() {
 			}
 		}
 		if !ok {
+			log.Printf("scrape schedule %s failed: no usable daily or seasonal schedule", p)
 			_ = db.MarkRouteUnavailable("noncapacity", parts[0], parts[1], MakeScheduleLink(parts[0], parts[1]), time.Now().UTC())
 		}
 	}
@@ -223,10 +234,14 @@ func ScrapeNonCapacityRoutes() {
 	if e == nil {
 		d, _ := goquery.NewDocumentFromReader(strings.NewReader(html))
 		service := parseGambier(d, time.Now().UTC())
+		if service.DataStatus != "available" {
+			log.Printf("scrape gambier-keats parse failed: warnings=%v validFrom=%s validThrough=%s columns=%d rows=%d notes=%d", service.Warnings, service.ValidFrom, service.ValidThrough, len(service.Columns), len(service.Rows), len(service.Notes))
+		}
 		if e = db.SaveSnapshot("special", "gambier-keats", service); e != nil {
 			log.Print(e)
 		}
 	} else {
+		log.Printf("scrape gambier-keats fetch failed: %v", e)
 		at := time.Now().UTC()
 		_ = db.SaveSnapshot("special", "gambier-keats", models.SpecialService{ID: "gambier-keats", DataState: models.DataState{DataStatus: "unavailable", CheckedAt: &at, SourceURL: gambierURL}})
 	}
