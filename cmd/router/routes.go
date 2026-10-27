@@ -6,9 +6,12 @@ import (
 	"net/http"
 	"time"
 
+	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"github.com/samuel-pratt/bc-ferries-api/cmd/db"
 	"github.com/samuel-pratt/bc-ferries-api/cmd/models"
+	"github.com/samuel-pratt/bc-ferries-api/cmd/staticdata"
+	"strings"
 )
 
 /**************/
@@ -19,6 +22,7 @@ type AllDataResponse struct {
 	CapacityRoutes    []models.CapacityRoute    `json:"capacityRoutes"`
 	NonCapacityRoutes []models.NonCapacityRoute `json:"nonCapacityRoutes"`
 	Meta              models.ResponseMeta       `json:"meta"`
+	SpecialServices   []models.SpecialService   `json:"specialServices"`
 }
 
 type CapacityResponse struct {
@@ -49,7 +53,10 @@ func GetCapacityAndNonCapacitySailings(w http.ResponseWriter, r *http.Request, p
 		CapacityRoutes:    capacityRoute,
 		NonCapacityRoutes: nonCapacityRoute,
 		Meta:              buildResponseMeta(capacityRoute, nonCapacityRoute, true, true),
+		SpecialServices:   db.GetSpecialServices(),
 	}
+	checkSpecialServices(&response.Meta, response.SpecialServices)
+	checkCatalogCoverage(&response.Meta, capacityRoute, nonCapacityRoute, true, true)
 
 	jsonString, _ := json.Marshal(response)
 
@@ -72,11 +79,67 @@ func buildResponseMeta(capacity []models.CapacityRoute, nonCapacity []models.Non
 	if requireSchedule {
 		sources["schedules"] = sourceHealth(oldestSchedule, now, 8*time.Hour)
 	}
+	issues := []string{}
+	loc, _ := time.LoadLocation("America/Vancouver")
+	today := now.In(loc).Format("2006-01-02")
+	if requireCapacity {
+		present := map[string]bool{}
+		for _, r := range capacity {
+			present[r.RouteCode] = true
+			if r.DataStatus != "available" || len(r.Warnings) > 0 {
+				issues = append(issues, "current conditions incomplete: "+r.RouteCode)
+			}
+			if r.ServiceDate != today {
+				issues = append(issues, "current conditions service date is not today: "+r.RouteCode)
+			}
+			for _, s := range r.Sailings {
+				if s.DepartureTime == "" || s.VesselName == "" {
+					issues = append(issues, "invalid sailing: "+r.RouteCode)
+					break
+				}
+			}
+		}
+		missing := 0
+		for _, p := range staticdata.CapacityPairs() {
+			if !present[strings.ReplaceAll(p, "-", "")] {
+				missing++
+			}
+		}
+		if missing > 0 {
+			issues = append(issues, fmt.Sprintf("missing capacity routes: %d", missing))
+		}
+	}
+	if requireSchedule {
+		present := map[string]bool{}
+		for _, r := range nonCapacity {
+			present[r.RouteCode] = true
+			if (r.DataStatus != "available" && r.DataStatus != "no-service") || len(r.Warnings) > 0 {
+				issues = append(issues, "schedule unavailable: "+r.RouteCode)
+			}
+			if r.ServiceDate != today {
+				issues = append(issues, "schedule service date is not today: "+r.RouteCode)
+			}
+			if r.CurrentConditions != nil && (r.CurrentConditions.DataStatus == "unavailable" || len(r.CurrentConditions.Warnings) > 0 || now.Sub(r.CurrentConditions.ObservedAt) > 10*time.Minute) {
+				issues = append(issues, "current conditions unavailable: "+r.RouteCode)
+			}
+		}
+		missing := 0
+		for _, p := range staticdata.SchedulePairs() {
+			if !present[strings.ReplaceAll(p, "-", "")] {
+				missing++
+			}
+		}
+		if missing > 0 {
+			issues = append(issues, fmt.Sprintf("missing schedule routes: %d", missing))
+		}
+	}
 	return models.ResponseMeta{
-		SchemaVersion: "2.1",
+		SchemaVersion: "2.2",
 		GeneratedAt:   now,
 		Stale:         stale,
 		Sources:       sources,
+		Complete:      !stale && len(issues) == 0,
+		Issues:        issues,
 	}
 }
 
@@ -137,8 +200,16 @@ func GetCapacitySailings(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		Routes: routes,
 		Meta:   buildResponseMeta(routes, nil, true, false),
 	}
+	checkCatalogCoverage(&response.Meta, routes, nil, true, false)
 
-	if len(response.Routes) == 0 || len(response.Routes[0].Sailings) == 0 {
+	usable := false
+	for _, route := range routes {
+		if len(route.Sailings) > 0 {
+			usable = true
+			break
+		}
+	}
+	if !usable {
 		jsonString, _ := json.Marshal("BC Ferries Data Currently Down")
 
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -168,9 +239,12 @@ func GetNonCapacitySailings(w http.ResponseWriter, r *http.Request, ps httproute
 	routes := db.GetNonCapacitySailings()
 
 	response := models.NonCapacityResponse{
-		Routes: routes,
-		Meta:   buildResponseMeta(nil, routes, false, true),
+		Routes:          routes,
+		Meta:            buildResponseMeta(nil, routes, false, true),
+		SpecialServices: db.GetSpecialServices(),
 	}
+	checkSpecialServices(&response.Meta, response.SpecialServices)
+	checkCatalogCoverage(&response.Meta, nil, routes, false, true)
 
 	jsonString, _ := json.Marshal(response)
 
@@ -386,7 +460,7 @@ func ConvertV1ResponseToV2Response(allData AllDataResponse) map[string]map[strin
 					route.Sailings = append(route.Sailings, models.Sailing{
 						DepartureTime: nonCapSailing.DepartureTime,
 						ArrivalTime:   nonCapSailing.ArrivalTime,
-						IsCancelled:   false,
+						IsCancelled:   nonCapSailing.Status == "cancelled",
 						Fill:          0,
 						CarFill:       0,
 						OversizeFill:  0,

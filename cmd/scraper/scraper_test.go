@@ -51,8 +51,12 @@ func TestParseCurrentConditionsOperationalData(t *testing.T) {
 	observedAt := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 
 	notices := parseServiceNotices(document, "TSASWB", "TSA", observedAt)
+	if len(notices) != 0 {
+		t.Fatalf("Gulf Islands terminal notices must not appear on TSA-SWB: %#v", notices)
+	}
+	notices = parseServiceNotices(document, "TSASGI", "TSA", observedAt)
 	if len(notices) != 3 {
-		t.Fatalf("expected 3 notices, got %d", len(notices))
+		t.Fatalf("expected 3 relevant Gulf Islands notices, got %d", len(notices))
 	}
 	if notices[0].ID == "" || notices[0].URL == "" {
 		t.Fatalf("notice lacks stable identity: %#v", notices[0])

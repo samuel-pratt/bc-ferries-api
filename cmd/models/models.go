@@ -9,6 +9,7 @@ import "time"
 /**************/
 
 type CapacityRoute struct {
+	DataState
 	RouteCode        string            `json:"routeCode"`
 	FromTerminalCode string            `json:"fromTerminalCode"`
 	ToTerminalCode   string            `json:"toTerminalCode"`
@@ -20,6 +21,7 @@ type CapacityRoute struct {
 }
 
 type CapacitySailing struct {
+	SailingDetails
 	DepartureTime string    `json:"time"`
 	ArrivalTime   string    `json:"arrivalTime"`
 	SailingStatus string    `json:"sailingStatus"`
@@ -35,14 +37,16 @@ type CapacitySailing struct {
 }
 
 type ServiceNotice struct {
-	ID            string    `json:"id"`
-	Title         string    `json:"title"`
-	URL           string    `json:"url"`
-	Type          string    `json:"type"`
-	Severity      string    `json:"severity"`
-	TerminalCodes []string  `json:"terminalCodes,omitempty"`
-	RouteCodes    []string  `json:"routeCodes,omitempty"`
-	ObservedAt    time.Time `json:"observedAt"`
+	ID             string     `json:"id"`
+	Title          string     `json:"title"`
+	Body           string     `json:"body,omitempty"`
+	BodyObservedAt *time.Time `json:"bodyObservedAt,omitempty"`
+	URL            string     `json:"url"`
+	Type           string     `json:"type"`
+	Severity       string     `json:"severity"`
+	TerminalCodes  []string   `json:"terminalCodes,omitempty"`
+	RouteCodes     []string   `json:"routeCodes,omitempty"`
+	ObservedAt     time.Time  `json:"observedAt"`
 }
 
 type Webcam struct {
@@ -62,28 +66,33 @@ type TerminalInfo struct {
 }
 
 type RouteOperationalData struct {
+	DataState
 	Notices    []ServiceNotice `json:"notices,omitempty"`
 	Terminal   *TerminalInfo   `json:"terminal,omitempty"`
 	ObservedAt time.Time       `json:"observedAt"`
 }
 
 type NonCapacityResponse struct {
-	Routes []NonCapacityRoute `json:"routes"`
-	Meta   ResponseMeta       `json:"meta"`
+	Routes          []NonCapacityRoute `json:"routes"`
+	Meta            ResponseMeta       `json:"meta"`
+	SpecialServices []SpecialService   `json:"specialServices"`
 }
 
 type NonCapacityRoute struct {
-	RouteCode        string               `json:"routeCode"`
-	FromTerminalCode string               `json:"fromTerminalCode"`
-	ToTerminalCode   string               `json:"toTerminalCode"`
-	SailingDuration  string               `json:"sailingDuration"`
-	Sailings         []NonCapacitySailing `json:"sailings"`
-	Notices          []ServiceNotice      `json:"notices,omitempty"`
-	Terminal         *TerminalInfo        `json:"terminal,omitempty"`
-	ObservedAt       time.Time            `json:"observedAt,omitempty"`
+	DataState
+	CurrentConditions *ConditionsSnapshot  `json:"currentConditions,omitempty"`
+	RouteCode         string               `json:"routeCode"`
+	FromTerminalCode  string               `json:"fromTerminalCode"`
+	ToTerminalCode    string               `json:"toTerminalCode"`
+	SailingDuration   string               `json:"sailingDuration"`
+	Sailings          []NonCapacitySailing `json:"sailings"`
+	Notices           []ServiceNotice      `json:"notices,omitempty"`
+	Terminal          *TerminalInfo        `json:"terminal,omitempty"`
+	ObservedAt        time.Time            `json:"observedAt,omitempty"`
 }
 
 type NonCapacitySailing struct {
+	SailingDetails
 	DepartureTime string    `json:"time"`
 	ArrivalTime   string    `json:"arrivalTime"`
 	VesselName    string    `json:"vesselName"`
@@ -105,6 +114,60 @@ type ResponseMeta struct {
 	GeneratedAt   time.Time               `json:"generatedAt"`
 	Stale         bool                    `json:"stale"`
 	Sources       map[string]SourceHealth `json:"sources"`
+	Complete      bool                    `json:"complete"`
+	Issues        []string                `json:"issues,omitempty"`
+}
+
+// Additive fields only: legacy sailing values and the five-column route tables
+// remain compatible with older clients and rollback binaries.
+type DataState struct {
+	DataStatus  string     `json:"dataStatus,omitempty"`
+	ServiceDate string     `json:"serviceDate,omitempty"`
+	CheckedAt   *time.Time `json:"checkedAt,omitempty"`
+	SourceURL   string     `json:"sourceURL,omitempty"`
+	Warnings    []string   `json:"warnings,omitempty"`
+}
+
+type SailingDetails struct {
+	ServiceDate           string     `json:"serviceDate,omitempty"`
+	ArrivalDate           string     `json:"arrivalDate,omitempty"`
+	ScheduledTime         string     `json:"scheduledTime,omitempty"`
+	ActualDepartureTime   string     `json:"actualDepartureTime,omitempty"`
+	EstimatedArrivalTime  string     `json:"estimatedArrivalTime,omitempty"`
+	ActualArrivalTime     string     `json:"actualArrivalTime,omitempty"`
+	Duration              string     `json:"duration,omitempty"`
+	Stops                 []Stop     `json:"stops,omitempty"`
+	CapacityKnown         *bool      `json:"capacityKnown,omitempty"`
+	CarCapacityKnown      *bool      `json:"carCapacityKnown,omitempty"`
+	OversizeCapacityKnown *bool      `json:"oversizeCapacityKnown,omitempty"`
+	StatusObservedAt      *time.Time `json:"statusObservedAt,omitempty"`
+}
+
+type Stop struct {
+	Type         string `json:"type"`
+	TerminalName string `json:"terminalName,omitempty"`
+}
+
+type ConditionsSnapshot struct {
+	DataState
+	ObservedAt time.Time         `json:"observedAt"`
+	Sailings   []CapacitySailing `json:"sailings"`
+	Notices    []ServiceNotice   `json:"notices,omitempty"`
+	Terminal   *TerminalInfo     `json:"terminal,omitempty"`
+}
+
+// The independently operated service has named stops, not standard BCF terminal
+// codes. Preserve its complete published matrix and request/connection legends.
+type SpecialService struct {
+	DataState
+	ID           string     `json:"id"`
+	Name         string     `json:"name"`
+	ObservedAt   time.Time  `json:"observedAt"`
+	ValidFrom    string     `json:"validFrom"`
+	ValidThrough string     `json:"validThrough"`
+	Columns      []string   `json:"columns"`
+	Rows         [][]string `json:"rows"`
+	Notes        []string   `json:"notes"`
 }
 
 /**************/

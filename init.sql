@@ -20,3 +20,10 @@ CREATE TABLE IF NOT EXISTS route_operational_data (
  payload JSONB NOT NULL DEFAULT '{}',
  PRIMARY KEY(kind,route_code)
 );
+
+CREATE TABLE IF NOT EXISTS source_snapshots (
+ kind TEXT NOT NULL,
+ source_key TEXT NOT NULL,
+ payload JSONB NOT NULL,
+ PRIMARY KEY(kind,source_key)
+);

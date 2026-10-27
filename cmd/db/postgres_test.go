@@ -2,9 +2,12 @@ package db
 
 import (
 	"database/sql"
+	"encoding/json"
+	"github.com/samuel-pratt/bc-ferries-api/cmd/models"
 	"net/url"
 	"os"
 	"testing"
+	"time"
 )
 
 // Only runs against the disposable release database created by compose.test.yml.
@@ -65,5 +68,38 @@ func TestMigrationPreservesLegacyAndAtomicWrites(t *testing.T) {
 	}
 	if err = Conn.QueryRow("SELECT sailing_duration FROM capacity_routes").Scan(&duration); err != nil || duration != "01:35" {
 		t.Fatalf("partial write escaped transaction: %s %v", duration, err)
+	}
+	observed := time.Now().UTC()
+	state, _ := json.Marshal(models.RouteOperationalData{DataState: models.DataState{DataStatus: "available", ServiceDate: "2026-09-11"}, ObservedAt: observed})
+	if err = SaveRoute("noncapacity", "CORHRB", "COR", "HRB", "00:45", []byte(`[{"time":"7:55 am","arrivalTime":"8:40 am","serviceDate":"2026-09-11"}]`), state); err != nil {
+		t.Fatal(err)
+	}
+	if err = MarkRouteUnavailable("noncapacity", "COR", "HRB", "source", observed.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	routes := GetNonCapacitySailings()
+	if len(routes) != 1 || routes[0].DataStatus != "unavailable" || len(routes[0].Sailings) != 1 || !routes[0].ObservedAt.Equal(observed) {
+		t.Fatalf("failure changed cached sailings/observation: %#v", routes)
+	}
+	conditions := models.ConditionsSnapshot{DataState: models.DataState{DataStatus: "available"}, ObservedAt: observed, Sailings: []models.CapacitySailing{{SailingDetails: models.SailingDetails{ServiceDate: "2026-09-11", ScheduledTime: "7:55 am", ActualDepartureTime: "8:01 am"}, DepartureTime: "8:01 am", VesselName: "Vessel", Status: "departed"}}}
+	if err = SaveSnapshot("conditions", "CORHRB", conditions); err != nil {
+		t.Fatal(err)
+	}
+	routes = GetNonCapacitySailings()
+	if routes[0].Sailings[0].DepartureTime != "7:55 am" || routes[0].Sailings[0].ActualDepartureTime != "8:01 am" || routes[0].Sailings[0].Status != "departed" {
+		t.Fatal(routes)
+	}
+	if err = SaveRoute("noncapacity", "CORHRB", "COR", "HRB", "", []byte(`[]`), []byte(`{"dataStatus":"no-service","serviceDate":"2026-09-12"}`)); err != nil {
+		t.Fatal(err)
+	}
+	routes = GetNonCapacitySailings()
+	if routes[0].DataStatus != "no-service" || len(routes[0].Sailings) != 0 || routes[0].CurrentConditions == nil {
+		t.Fatal("empty service retained yesterday or erased independent conditions")
+	}
+	if err = MarkRouteUnavailable("noncapacity", "KLE", "PBB", "source", observed); err != nil {
+		t.Fatal(err)
+	}
+	if len(GetNonCapacitySailings()) != 2 {
+		t.Fatal("missing unavailable route")
 	}
 }

@@ -56,6 +56,7 @@ func GetCapacitySailings() []models.CapacityRoute {
 			route.Notices = operational.Notices
 			route.Terminal = operational.Terminal
 			route.ObservedAt = operational.ObservedAt
+			route.DataState = operational.DataState
 		}
 		routes = append(routes, route)
 	}
@@ -115,6 +116,7 @@ func GetNonCapacitySailings() []models.NonCapacityRoute {
 			route.Notices = operational.Notices
 			route.Terminal = operational.Terminal
 			route.ObservedAt = operational.ObservedAt
+			route.DataState = operational.DataState
 		}
 		routes = append(routes, route)
 	}
@@ -124,5 +126,9 @@ func GetNonCapacitySailings() []models.NonCapacityRoute {
 		return nil
 	}
 
+	// Release this query's connection before loading the independent snapshots.
+	// Otherwise concurrent requests can exhaust the pool while holding all rows.
+	rows.Close()
+	attachConditions(routes)
 	return routes
 }

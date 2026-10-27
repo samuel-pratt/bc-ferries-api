@@ -1,6 +1,6 @@
 services:
     db:
-        image: ${POSTGRES_IMAGE:?Set POSTGRES_IMAGE to the existing database major version; see DEPLOYMENT.md}
+        image: ${POSTGRES_IMAGE:?Set POSTGRES_IMAGE to the existing database major version; see README.md}
         restart: unless-stopped
         logging:
             driver: local

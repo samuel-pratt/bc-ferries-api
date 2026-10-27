@@ -29,7 +29,7 @@ func GetCapacityDepartureTerminals() []string {
  */
 func GetCapacityDestinationTerminals() [][]string {
 	destinationTerminals := [6][]string{
-		{"SWB", "SGI", "DUK"},
+		{"SWB", "SGI", "DUK", "NAN"},
 		{"TSA", "FUL", "SGI"},
 		{"NAN", "LNG", "BOW"},
 		{"TSA"},
@@ -48,7 +48,7 @@ func GetCapacityDestinationTerminals() [][]string {
  * @return []string
  */
 func GetNonCapacityDepartureTerminals() []string {
-	departureTerminals := [46]string{
+	departureTerminals := [47]string{
 		"TSA", "HSB", "SWB", "NAN", "DUK",
 		"NAH", "CMX", "PPH", "BTW", "BKY",
 		"CAM", "CHM", "CFT", "MIL", "MCN",
@@ -57,7 +57,7 @@ func GetNonCapacityDepartureTerminals() []string {
 		"PEN", "PLH", "VES", "FUL", "THT",
 		"ALR", "DNM", "DNE", "HRN", "SOI",
 		"HRB", "QDR", "BEC", "PBB", "POF",
-		"SHW", "KLE", "PPR", "PSK", "ALF", "BOW",
+		"SHW", "KLE", "PPR", "PSK", "ALF", "BOW", "COR",
 	}
 
 	return departureTerminals[:]
@@ -71,19 +71,19 @@ func GetNonCapacityDepartureTerminals() []string {
  * @return [][]string
  */
 func GetNonCapacityDestinationTerminals() [][]string {
-	destinationTerminals := [46][]string{
-		{"PSB", "PVB", "DUK", "POB", "PLH", "PST", "SWB"},
+	destinationTerminals := [47][]string{
+		{"PSB", "PVB", "DUK", "POB", "PLH", "PST", "SWB", "NAN"},
 		{"BOW", "NAN", "LNG"},
-		{"PSB", "PVB", "POB", "FUL", "PST", "TSA", "PSB", "PVB", "POB", "FUL", "PST"},
+		{"PSB", "PVB", "POB", "FUL", "PST", "TSA"},
 		{"HSB"},
 		{"TSA"},
 		{"GAB"},
 		{"PWR"},
-		{"PBB", "BEC", "KLE", "POF", "PPR", "SHW", "PBB", "BEC", "KLE", "POF", "PPR", "SHW"},
+		{"PBB", "BEC", "KLE", "POF", "PPR", "SHW"},
 		{"MIL"},
 		{"DNM"},
 		{"QDR"},
-		{"PEN", "THT", "PEN", "THT"},
+		{"PEN", "THT"},
 		{"VES"},
 		{"BTW"},
 		{"ALR", "SOI"},
@@ -113,11 +113,12 @@ func GetNonCapacityDestinationTerminals() [][]string {
 		{"BEC", "KLE", "POF", "PPH", "PPR", "SHW"},
 		{"PBB", "BEC", "PPH", "SHW"},
 		{"PBB", "BEC", "POF", "PPH"},
-		{"PBB", "PPH", "PPR", "PBB", "PPH"},
-		{"PBB", "PSK", "KLE", "PPH", "PSK"},
+		{"PBB", "PPH", "PPR"},
+		{"PBB", "PSK", "KLE", "PPH"},
 		{"ALF", "PPR"},
 		{"PSK"},
 		{"HSB"},
+		{"HRB"},
 	}
 
 	return destinationTerminals[:]

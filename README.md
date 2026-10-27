@@ -1,133 +1,50 @@
 # BC Ferries API
 
-[bcferriesapi.ca](https://bcferriesapi.ca) is a free, read-only JSON API for current BC Ferries schedules, vessel capacity, service notices, and sailing status. No API key is required.
+[bcferriesapi.ca](https://bcferriesapi.ca) provides free JSON data for BC Ferries schedules, sailing capacity, and service notices. No API key is needed. This is an unofficial API; data can be delayed or unavailable.
 
-> [!IMPORTANT]
-> This is an independent project and is not affiliated with BC Ferries. Data reflects the BC Ferries website when it was collected and may be delayed or unavailable. Check the response freshness metadata before using it for time-sensitive travel decisions.
-
-## Quick start
+## Using the API
 
 ```sh
-curl https://bcferriesapi.ca/v2/capacity/
+curl https://bcferriesapi.ca/v2/
 ```
 
-All public API responses use JSON and allow cross-origin requests.
-
-## API reference
-
-### Version 2
-
-V2 is the current API. It includes every route served by BC Ferries and adds operational and freshness information without removing fields expected by existing clients.
-
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | [`/v2/`](https://bcferriesapi.ca/v2/) | Capacity and non-capacity routes |
-| `GET` | [`/v2/capacity/`](https://bcferriesapi.ca/v2/capacity/) | Routes for which BC Ferries reports vessel fill data |
-| `GET` | [`/v2/noncapacity/`](https://bcferriesapi.ca/v2/noncapacity/) | Remaining routes and schedules |
-| `GET` | [`/healthcheck/`](https://bcferriesapi.ca/healthcheck/) | Basic service health check |
-
-The combined endpoint has this top-level shape:
-
-```json
-{
-  "capacityRoutes": [],
-  "nonCapacityRoutes": [],
-  "meta": {
-    "schemaVersion": "2.1",
-    "generatedAt": "2026-08-21T12:00:00Z",
-    "stale": false,
-    "sources": {}
-  }
-}
-```
-
-The capacity and non-capacity endpoints each return a `routes` array and the same `meta` object. The example timestamps and empty arrays above illustrate structure only.
-
-### Route fields
-
-Every V2 route can include:
-
-| Field | Type | Description |
-| --- | --- | --- |
-| `routeCode` | string | Identifier for the terminal pair |
-| `fromTerminalCode` | string | Departure terminal code |
-| `toTerminalCode` | string | Arrival terminal code |
-| `sailingDuration` | string | Published crossing duration |
-| `sailings` | array | Scheduled sailings for the route |
-| `observedAt` | timestamp | When this route was last observed |
-| `notices` | array | Service notices affecting the route, when available |
-| `terminal` | object | Terminal details and webcam metadata, when available |
-
-Capacity sailings include `time`, `arrivalTime`, `sailingStatus`, `fill`, `carFill`, `oversizeFill`, `vesselName`, and `vesselStatus`. Non-capacity sailings omit the fill fields. Either kind may also include:
-
-- `status`: normalized `scheduled`, `delayed`, `departed`, `arrived`, or `cancelled` state.
-- `statusText`: the source wording shown by BC Ferries.
-- `delayMinutes`: a parsed delay, when one can be determined.
-- `observedAt`: when the source information was observed.
-
-Retain `statusText` when displaying operational information: normalized fields are interpretations of the public website, not an official operational feed.
-
-### Freshness metadata
-
-The `meta` object describes the whole response:
-
-| Field | Description |
+| Endpoint | Returns |
 | --- | --- |
-| `schemaVersion` | Response schema version |
-| `generatedAt` | Time the API assembled the response |
-| `stale` | Whether one or more required sources are older than their freshness threshold |
-| `sources` | Per-source status, observation time, and last successful collection time |
+| `GET /v2/` | `capacityRoutes`, `nonCapacityRoutes`, and `specialServices` |
+| `GET /v2/capacity/` | Routes with capacity data, in a `routes` array |
+| `GET /v2/noncapacity/` | Collected schedules in `routes`, plus `specialServices` |
+| `GET /api/` | Legacy upcoming sailings for a limited set of terminal pairs |
+| `GET /api/{departure-terminal}/` | Legacy sailings from one terminal |
+| `GET /api/{departure-terminal}/{destination-terminal}/` | Legacy sailings for one terminal pair |
+| `GET /healthcheck/` | Server liveness |
+| `GET /readyz/` | Database access and availability of cached capacity sailings (not a freshness check) |
+| `GET /` | Website |
 
-Each source reports a `status` of `fresh`, `stale`, or `unavailable`. Consumers should check both `meta.stale` and the relevant route or sailing `observedAt` value.
+Routes include terminal codes, sailing duration, and a `sailings` array. Sailings include departure/arrival times, vessel details, and capacity percentages where available. Additional fields provide notices, terminal details, sailing status, and observation times. Notices include an optional plain-text `body` and `bodyObservedAt` when the official notice can be fetched; keep the `url` as a fallback. Notice text is cached for up to two minutes. V2 has no per-route endpoint: filter the returned arrays by `routeCode` (for example, `TSASWB`).
 
-JSON Schemas are available in [`schemas/`](schemas/):
+Sailing times use BC local time; `serviceDate` and `arrivalDate` identify their dates. `observedAt` timestamps use UTC. For compatibility, capacity `time` becomes the actual departure after sailing; `scheduledTime` preserves the original time. `actualDepartureTime`, `estimatedArrivalTime`, and `actualArrivalTime` are separate when available. Schedule `time`/`arrivalTime` remain scheduled times; `duration` and `stops` describe each trip.
 
-- [`bc-ferries-api-v2-schema.json`](schemas/bc-ferries-api-v2-schema.json)
-- [`bc-ferries-api-v2-capacity-schema.json`](schemas/bc-ferries-api-v2-capacity-schema.json)
-- [`bc-ferries-api-v2-noncapacity-schema.json`](schemas/bc-ferries-api-v2-noncapacity-schema.json)
+Capacity `fill`, `carFill`, and `oversizeFill` are percentages **full**, not space remaining. Use their respective `capacityKnown`, `carCapacityKnown`, and `oversizeCapacityKnown` flags: legacy numeric values alone cannot distinguish missing data from zero. Current conditions refresh every minute; schedules refresh every four hours and just after midnight Pacific time.
 
-### Capacity terminal codes
+Check `meta.stale`, `meta.complete`, `meta.issues`, and route `dataStatus` before using cached data. `no-service` means a verified empty schedule for `serviceDate`; `unavailable` means collection failed or the source did not publish a usable schedule, and older cached sailings may remain. Fresh data is not necessarily complete or correct upstream. Ignore unfamiliar fields and handle empty results. When no cached capacity sailings exist, `/v2/capacity/` returns the JSON string `"BC Ferries Data Currently Down"`. Responses allow cross-origin requests.
 
-| From | Supported destinations |
-| --- | --- |
-| `TSA` | `SWB`, `SGI`, `DUK` |
-| `SWB` | `TSA`, `FUL`, `SGI` |
-| `HSB` | `NAN`, `LNG`, `BOW` |
-| `DUK` | `TSA` |
-| `LNG` | `HSB` |
-| `NAN` | `HSB` |
+For example, `https://bcferriesapi.ca/api/TSA/SWB/` returns Tsawwassen–Swartz Bay sailings.
 
-### Errors and availability
+### Coverage
 
-The service currently returns JSON for successful requests and permits CORS with `Access-Control-Allow-Origin: *`. If capacity data is temporarily unavailable, the capacity endpoint may return the JSON string `"BC Ferries Data Currently Down"`. Clients should tolerate missing optional fields and unavailable or stale source data.
+V2 includes Cortes Island–Heriot Bay (`COR` → `HRB`) and Tsawwassen–Departure Bay (`TSA` → `NAN`). Route discovery checks the official indexes; terminal codes are available in the responses. Legacy `/api/` coverage is unchanged.
 
-### Version 1 (legacy)
+Schedule routes also expose `currentConditions` with live sailings, notices, terminal details, and its own observation time. `not-published` means BC Ferries does not expose a live sailing table for that direction. Matching live sailings update schedule status without replacing scheduled times; `statusObservedAt` identifies that observation. `unknown` is not a confirmed departure or cancellation.
 
-V1 remains available for older clients:
+The independently operated [Gambier/Keats service](https://www.bcferries.com/routes-fares/schedules/gambier-keats) appears in `specialServices`, using its published `columns`, `rows`, date range, and `notes` rather than invented terminal codes. Read the weekday/holiday column headings and request-only/connection footnotes; these are not unconditional departures. Expired or unavailable timetables are flagged.
 
-```text
-GET /api/
-GET /api/{departure-terminal}/
-GET /api/{departure-terminal}/{destination-terminal}/
-```
+Dangerous-goods-only sailings are excluded from passenger schedules. Data depends on what BC Ferries publishes; it is not a booking, fare, or guaranteed real-time vessel-position service. `/readyz/` checks availability, not data completeness.
 
-Example:
+Check [BC Ferries schedules](https://www.bcferries.com/routes-fares/schedules) and [current conditions](https://www.bcferries.com/current-conditions) for travel decisions.
 
-```sh
-curl https://bcferriesapi.ca/api/TSA/SWB/
-```
+## Running it
 
-Supported codes are `TSA`, `SWB`, `SGI`, `DUK`, `FUL`, `HSB`, `NAN`, `LNG`, and `BOW`. New integrations should use V2.
-
-## Run locally
-
-### Requirements
-
-- Docker
-- Docker Compose
-- Go 1.19 or newer, only when running outside Docker
-
-Clone the repository and create the environment file:
+Requires Docker with Docker Compose. For a new installation:
 
 ```sh
 git clone https://github.com/samuel-pratt/bc-ferries-api.git
@@ -135,25 +52,24 @@ cd bc-ferries-api
 cp .env.example .env
 ```
 
-Replace the example database password in `.env`, then start the services:
+Set a database password in `.env`, then start the API and database:
 
 ```sh
+chmod 600 .env
+docker volume create bcferries_pg17
 docker compose up --build -d
 ```
 
-The default local endpoints are:
+The website is at `http://localhost:8081/` and the API is at `http://localhost:8081/v2/`. `/healthcheck/` checks that the server is running; `/readyz/` checks database access and cached capacity data. A fresh install needs time to collect sailings.
 
-- `http://localhost:8081/healthcheck/`
-- `http://localhost:8081/v2/`
+Use `docker compose logs -f api` for logs and `docker compose down` to stop without deleting data. For public hosting, put an HTTPS reverse proxy in front of port 8081, which binds to localhost.
 
-Follow logs with `docker compose logs -f api`. Stop the stack without deleting its database volume with `docker compose down`.
+**Existing installations:** keep your existing credentials, Compose project name, `BC_DB_VOLUME`, and PostgreSQL major version in `POSTGRES_IMAGE`. Back up first with `bash scripts/backup.sh`. Do not point a newer PostgreSQL major at an old volume or use `docker compose down -v`. The API applies its metadata migration automatically.
 
-The API creates a separate `route_operational_data` table idempotently at startup, preserving the five-column legacy route tables for rollback. [`migrations/003_operational_data.sql`](migrations/003_operational_data.sql) is also available for operators who run migrations separately. The migration role needs `CREATE` in the schema. See [DEPLOYMENT.md](DEPLOYMENT.md) for the controlled migration, database upgrade, and rollback procedure.
+Run `bash scripts/verify.sh` for tests using disposable containers.
 
 ## Used by
 
-- [BC Ferry Times](https://apps.apple.com/ca/app/id1615899209) — iOS app for ferry schedules and capacities.
-- [MMM BC Ferries](https://github.com/stonecrown/MMM-BCFerries) — MagicMirror² route information module.
-- [Cascadia Crossing](https://apps.apple.com/app/1643019956) — iOS app for border waits, ferry schedules, and capacities.
-
-If you build something with the API, feel free to open an issue or pull request to add it here.
+- [BC Ferry Times](https://apps.apple.com/ca/app/id1615899209)
+- [MMM BC Ferries](https://github.com/stonecrown/MMM-BCFerries)
+- [Cascadia Crossing](https://apps.apple.com/app/1643019956)
