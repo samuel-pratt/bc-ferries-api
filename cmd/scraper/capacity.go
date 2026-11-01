@@ -14,6 +14,7 @@ var clockPattern = regexp.MustCompile(`(?i)\b\d{1,2}:\d{2}\s*[ap]m\b`)
 var departedPattern = regexp.MustCompile(`(?i)Departed\s+(\d{1,2}:\d{2}\s*[ap]m)`)
 var arrivalPattern = regexp.MustCompile(`(?i)(Arrived|ETA)\s*:\s*(\d{1,2}:\d{2}\s*[ap]m|Variable)`)
 var percentPattern = regexp.MustCompile(`^(\d{1,3})%$`)
+var conditionsDatePattern = regexp.MustCompile(`\((Tomorrow|[A-Za-z]+ \d{1,2}, \d{4})\)`)
 
 func clean(s string) string { return strings.Join(strings.Fields(s), " ") }
 func flag(v bool) *bool     { return &v }
@@ -105,8 +106,22 @@ func parseConditions(d *goquery.Document, from, to string, at time.Time, fetch d
 		}
 		s.ScheduledTime = s.DepartureTime
 		cut := timeIndexes[0][1]
-		if strings.Contains(left, "(Tomorrow)") {
-			s.ServiceDate = pacific(at).AddDate(0, 0, 1).Format("2006-01-02")
+		dateLabel := conditionsDatePattern.FindStringSubmatch(left)
+		if len(dateLabel) > 0 {
+			date := pacific(at).AddDate(0, 0, 1)
+			if dateLabel[1] != "Tomorrow" {
+				var err error
+				date, err = time.ParseInLocation("Jan 2, 2006", dateLabel[1], pacific(at).Location())
+				if err != nil {
+					date, err = time.ParseInLocation("January 2, 2006", dateLabel[1], pacific(at).Location())
+				}
+				if err != nil {
+					result.DataStatus = "unavailable"
+					result.Warnings = append(result.Warnings, fmt.Sprintf("invalid service date in sailing row %d", i))
+					return
+				}
+			}
+			s.ServiceDate = date.Format("2006-01-02")
 		}
 		s.SailingStatus = "future"
 		s.Status = "scheduled"
@@ -119,7 +134,7 @@ func parseConditions(d *goquery.Document, from, to string, at time.Time, fetch d
 				cut = timeIndexes[1][1]
 			}
 		}
-		s.VesselName = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(left[cut:]), "(Tomorrow)"))
+		s.VesselName = clean(conditionsDatePattern.ReplaceAllString(left[cut:], ""))
 		if m := arrivalPattern.FindStringSubmatch(right); len(m) > 0 {
 			s.ArrivalTime = m[2]
 			if strings.EqualFold(m[1], "Arrived") {

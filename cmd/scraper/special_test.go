@@ -45,20 +45,25 @@ func TestGambierSharedYearSchedule(t *testing.T) {
 	}
 	// Replay the saved table with the exact date header published October 26.
 	html := strings.Replace(string(b), "September 8, 2026 to October 12, 2026", "October 13 to December 16, 2026", 1)
+	location, err := time.LoadLocation("America/Vancouver")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Use local calendar boundaries rather than assuming a winter UTC offset.
+	start := time.Date(2026, 10, 13, 0, 0, 0, 0, location)
+	expires := time.Date(2026, 12, 17, 0, 0, 0, 0, location)
 	for _, tc := range []struct {
-		name, at, status string
+		name, status string
+		at           time.Time
 	}{
-		{"before Pacific start", "2026-10-13T06:59:59Z", "unavailable"},
-		{"Pacific start", "2026-10-13T07:00:00Z", "available"},
-		{"reported production failure", "2026-10-27T04:00:00Z", "available"},
-		{"Pacific last second", "2026-12-17T07:59:59Z", "available"},
-		{"expired in Pacific", "2026-12-17T08:00:00Z", "unavailable"},
+		{"before Pacific start", "unavailable", start.Add(-time.Second)},
+		{"Pacific start", "available", start},
+		{"reported production failure", "available", time.Date(2026, 10, 27, 4, 0, 0, 0, time.UTC)},
+		{"Pacific last second", "available", expires.Add(-time.Second)},
+		{"expired in Pacific", "unavailable", expires},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			at, err := time.Parse(time.RFC3339, tc.at)
-			if err != nil {
-				t.Fatal(err)
-			}
+			at := tc.at
 			s := parseGambier(document(html), at)
 			if s.DataStatus != tc.status || s.ValidFrom != "2026-10-13" || s.ValidThrough != "2026-12-16" || len(s.Rows) != 52 || len(s.Columns) != 5 || len(s.Notes) < 4 {
 				t.Fatalf("unexpected schedule: %+v", s)
