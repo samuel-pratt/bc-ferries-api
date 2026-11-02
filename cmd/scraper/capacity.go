@@ -172,7 +172,16 @@ func parseConditions(d *goquery.Document, from, to string, at time.Time, fetch d
 				s.Fill = n
 				s.CapacityKnown = flag(true)
 			}
-			if strings.EqualFold(right, "full") || strings.EqualFold(clean(cells.Eq(1).Find(".cc-message-updates").Text()), "full") {
+			full := strings.EqualFold(right, "full") || strings.EqualFold(clean(cells.Eq(1).Find(".cc-message-updates").Text()), "full")
+			// The Full label can share its container with an operational warning.
+			// Read the standalone label, not the combined container text or a
+			// substring of a warning (which could say "not full").
+			cells.Eq(1).Find(".cc-message-updates > span").Each(func(_ int, label *goquery.Selection) {
+				if strings.EqualFold(clean(label.Text()), "full") {
+					full = true
+				}
+			})
+			if full {
 				s.Fill = 100
 				s.CarFill = 100
 				s.OversizeFill = 100
